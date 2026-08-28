@@ -24,6 +24,10 @@ jobs:
           test -f docs/00-architecture-master.md
           test -d docs/03-architecture-decision-records
           echo "Docs present"
-      - name: Validate build scripts import cleanly (syntax)
+      - name: Validate build scripts compile
         run: |
-          for f in pdf/build_pdf.py pdf/build_langgraph.py pdf/build_v2.py; do python -m py_compile "$f" && echo "OK $f"; done
+          for f in pdf/build_pdf.py pdf/build_langgraph.py pdf/build_v2.py pdf/build_v3.py pdf/build_v4.py pdf/build_db_easy.py; do python -m py_compile "$f" && echo "OK $f"; done
+      - name: Compile backend + ai_runtime + tests
+        run: |
+          find backend/app backend/ai_runtime backend/tests -name '*.py' -print0 | xargs -0 -n1 python -m py_compile
+          echo "backend compiles"

@@ -1,4 +1,4 @@
-# Build / render intermediates (regenerable)
+# ---------- docs/PDF build intermediates ----------
 pdf/_build/
 pdf/_build_v2/
 pdf/_build_lg/
@@ -9,15 +9,43 @@ pdf/_build_v4/
 pdf/_build_v4s/
 *.mmd
 
-# Python
+# ---------- python ----------
 __pycache__/
-*.pyc
-*.pyo
+*.py[cod]
+*.egg-info/
+*.egg
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 
-# OS / editor
-Thumbs.db
-.DS_Store
+# ---------- node / web ----------
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+
+# ---------- env (keep examples) ----------
+.env
+.env.*
+!.env.example
+
+# ---------- infra ----------
+*.tfstate
+*.tfstate.backup
+.terraform/
+*.plan
+
+# ---------- editor / os / logs ----------
 .vscode/
-
-# scratch
-_growtest.pdf
+.idea/
+*.swp
+*.log
+logs/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,50 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      # migration role is the superuser/owner; the app role is created in db/init.sql
+      POSTGRES_USER: aegispay_migration
+      POSTGRES_PASSWORD: aegispay
+      POSTGRES_DB: aegispay
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+  db_migrate:
+    image: postgres:16
+    command: ["psql", "-h", "db", "-U", "aegispay_migration", "-d", "aegispay", "-f", "/migrations/0001_init.sql"]
+    volumes: ["./migrations:/migrations:ro"]
+    depends_on: ["db"]
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+
+  localstack:
+    image: localstack/localstack:latest
+    environment:
+      SERVICES: sqs
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+    ports: ["4566:4566"]
+
+  app:
+    build: .
+    environment:
+      APP_ENV: local
+      DATABASE_URL: postgresql+asyncpg://aegispay_app:aegispay@db:5432/aegispay
+      REDIS_URL: redis://redis:6379/0
+      SQS_URL: http://localstack:4566/000000000000/aegispay
+    depends_on: ["db_migrate", "redis", "localstack"]
+    ports: ["8000:8000"]
+
+  ai_runtime:
+    build:
+      context: .
+      dockerfile: Dockerfile.ai
+    depends_on: ["app"]
+    ports: ["8001:8000"]
+
+volumes:
+  pgdata:
