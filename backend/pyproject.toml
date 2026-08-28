@@ -42,3 +42,10 @@ target-version = "py312"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+
+[tool.mypy]
+ignore_missing_imports = true
+explicit_package_bases = true
+mypy_path = "."
+files = ["app/modules"]
+check_untyped_defs = true

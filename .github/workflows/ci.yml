@@ -32,11 +32,7 @@ jobs:
 
       - name: Type check (mypy) on domain modules
         working-directory: backend
-        run: mypy --ignore-missing-imports \
-          app/modules/protocol_gateway app/modules/idempotency \
-          app/modules/commerce app/modules/campaigns app/modules/refunds \
-          app/modules/payments/state.py app/modules/policy app/modules/audit \
-          app/modules/events app/modules/passport app/modules/outbox
+        run: mypy
 
       - name: Unit tests (payment safety, policy, gateway, idempotency, carts, budget, refunds)
         working-directory: backend
