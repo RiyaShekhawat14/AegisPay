@@ -2,68 +2,79 @@
 
 ![CI](https://github.com/RiyaShekhawat14/AegisPay/actions/workflows/ci.yml/badge.svg)
 
-> **The Trust & Growth Layer for Agentic Commerce**
+> **The Trust &amp; Growth Layer for Agentic Commerce**
 
-**AI can reason. AegisPay controls whether it is allowed to act.**
+**AI can reason and recommend. Only AegisPay's deterministic control plane can authorize
+and execute financial actions.**
 
-AegisPay is an agentic-commerce **control plane** that delivers three pillars:
-
-# GROW
-Help merchants increase revenue with AI (upsell, cross-sell, bundles, campaigns,
-segment/re-engagement).
-
-# SELL
-Make merchants discoverable and transactable by AI buyers (agent-readable catalog,
-discovery, conversational checkout, end-to-end transaction).
-
-# PROTECT
-Ensure every AI-driven financial action is explainable, bounded, gated, authorized,
-auditable, idempotent and recoverable (policy, risk, authorization, human-in-the-loop,
-Transaction Passport, audit, reconciliation, prompt-injection defense).
-
-The architectural consequence of GROW+SELL+PROTECT is one invariant:
-
-> **AI may propose a financial action. Only the deterministic AegisPay control
-> plane may authorize and execute it.**
-
-```
-AI Reasoning
-     ↓
-Structured Intent
-     ↓
-Intent Validation
-     ↓
-Policy Evaluation
-     ↓
-Risk Evaluation
-     ↓
-Authorization
-     ↓
-Human Approval if Required
-     ↓
-Payment Execution
-```
-
-No LLM ever receives secret keys, database credentials, unrestricted payment/refund
-APIs, or the authority to move money directly. **`LLM → Razorpay` is impossible by
-construction.**
+AegisPay is a **control plane** between AI agents and payment infrastructure (Razorpay
+today, other providers later). It is not a chatbot with a payment API attached — it is a
+controlled financial execution system with an AI interface. This repository is the
+engineering documentation set for that system, built to be reviewed as production
+financial infrastructure, not a hackathon scaffold.
 
 ---
 
-## Why this repository exists
+## The three pillars
 
-This is the **engineering documentation set** for AegisPay, produced at production
-depth. It is designed to be reviewed as if a **Razorpay engineer** is deciding whether
-to approve it for production financial infrastructure — not as a hackathon scaffold.
-It is honest about protocol maturity, avoids invented compliance claims, prefers
-boring reliable infrastructure, and is built to graduate from **Razorpay Test Mode** to
-production.
+| Pillar | What it does |
+|---|---|
+| **GROW** | AI helps merchants increase revenue: upsell, cross-sell, bundles, campaigns, A/B experimentation. Bounded and budget-controlled. |
+| **SELL** | AI buyers understand intent, discover products, recommend, build carts, get authorization, and pay end-to-end through Razorpay. |
+| **PROTECT** | AI can reason and recommend, but never directly controls money. Every AI money action is gated, explainable, auditable and recoverable. |
 
-The defining result:
+The architectural consequence of GROW + SELL + PROTECT is one invariant:
 
-> Correctness, security, reliability and explainability are enforced by deterministic,
-> versioned, auditable code paths — not by prompt engineering, not by model good
-> behavior, not by hope. **AI can grow and sell. AegisPay makes money safe to let it.**
+> **AI may propose a financial action. Only the deterministic AegisPay control plane may
+> authorize and execute it.**
+
+```
+AI Reasoning → Structured Intent → Intent Validation → Policy → Risk → Authorization
+            → Human Approval (if required) → Payment Execution → Webhook → Reconciliation → Audit
+```
+
+The AI runtime **never** receives secret keys, database credentials, unrestricted
+payment/refund APIs, or the authority to move money. Money movement is impossible from
+the AI layer by construction.
+
+---
+
+## Why this exists
+
+AI agents are increasingly able to discover products and make purchasing decisions. But
+LLMs are probabilistic and can be manipulated (prompt injection, tool poisoning, cart
+tampering); payment APIs are deterministic and must be authorized, audited and safe to
+recover from failure. AegisPay puts a **deterministic, versioned, auditable control plane**
+between the two.
+
+The defining property: **correctness, security, reliability and explainability are
+enforced by code paths and versioned policies, not by prompt engineering or model good
+behavior.** AI can grow and sell; AegisPay keeps the money safe while it does.
+
+---
+
+## System overview
+
+```
+ AI / Agent layer (proposes only)
+   SELL agent          GROW agent
+          \               /
+           Structured intent
+                    |
+   AegisPay Control Plane (validates, authorizes, controls)
+     Commerce Orchestrator · Policy · Risk · Authorization
+     Payment Engine · Human Approval · Reconciliation · Audit + Passport
+                    |
+       Postgres (state + RLS + audit + outbox) · Redis · SQS
+                    |
+                 Razorpay
+              (Verified webhook → Reconciliation → Transaction Passport)
+```
+
+There are exactly **two services**: the **Control Plane** (owns financial state, policy,
+authorization, provider interaction, audit, reconciliation) and an **isolated AI Runtime**
+(no database credentials, no payment secrets, no money tools, tool allowlist, structured
+output, checkpointing).
 
 ---
 
@@ -71,55 +82,32 @@ The defining result:
 
 ```
 AgeisPay/
-├── README.md                              ← you are here (index)
-├── docs/
-│   ├── 00-architecture-master.md          ← THE master doc (full §59 ordering)
-│   ├── 00b-grow-sell-protect.md           ← product model & challenge interpretation
-│   ├── 01-product-requirements.md
-│   ├── 02-system-architecture.md
-│   ├── 03-architecture-decision-records/  ← ADR-001 … ADR-018
-│   ├── 04-api-specification.md
-│   ├── 05-database-design.md
-│   ├── 06-data-dictionary.md
-│   ├── 07-security-architecture.md
-│   ├── 08-threat-model.md
-│   ├── 09-agent-security.md
-│   ├── 10-policy-engine.md
-│   ├── 11-risk-engine.md
-│   ├── 12-authorization-model.md
-│   ├── 13-payment-engine.md
-│   ├── 14-webhook-architecture.md
-│   ├── 15-reconciliation.md
-│   ├── 16-audit-ledger.md
-│   ├── 17-transaction-passport.md
-│   ├── 18-protocol-integration.md
-│   ├── 19-mcp-a2a-integration.md
-│   ├── 20-observability.md
-│   ├── 21-infrastructure.md
-│   ├── 22-deployment.md
-│   ├── 23-ci-cd.md
-│   ├── 24-testing-strategy.md
-│   ├── 25-load-testing.md
-│   ├── 26-disaster-recovery.md
-│   ├── 27-agent-readable-catalog.md       ← SELL: machine-readable catalog (DATA vs INSTRUCTIONS)
-│   ├── 28-growth-agent.md                 ← GROW: merchant revenue agent
-│   ├── 29-campaign-orchestrator.md        ← GROW: campaign pipelines
-│   ├── 30-merchant-autonomy.md            ← autonomy levels L0–L4
-│   ├── 31-event-catalog.md
-│   ├── 32-state-machines.md
-│   ├── 33-data-retention.md
-│   ├── 34-privacy.md
-│   ├── 35-risk-register.md
-│   ├── 36-production-readiness-checklist.md
-│   ├── 37-threat-scenarios.md
-│   ├── 38-red-team-plan.md
-│   ├── 39-demo-script.md
-│   ├── 40-engineering-roadmap.md
-│   ├── 41-protocols.md                    ← deep per-protocol analysis (MCP/A2A/ACP/AP2/x402/UAP)
-│   └── 54-success-metrics.md              ← measurable growth/safety/ops metrics
-└── api/
-    └── openapi.yaml                       ← OpenAPI 3.1 conformance
+├── README.md                       ← you are here
+├── CONTRIBUTING.md                 ← how to change and regenerate docs
+├── .github/workflows/ci.yml        ← validation (OpenAPI, docs, build scripts)
+├── api/
+│   └── openapi.yaml                ← OpenAPI 3.1 contract
+├── docs/                           ← engineering documentation set
+│   ├── 00-architecture-master.md   ← the master architecture doc
+│   ├── 00b-grow-sell-protect.md    ← product model
+│   ├── 01-product-requirements.md  →  54-success-metrics.md
+│   └── 03-architecture-decision-records/  ← ADR-001 … ADR-018
+├── pdf/
+│   ├── build_*.py                  ← PDF generators (mermaid + reportlab)
+│   └── _html/*.html                ← frontend & live-flow mockup sources
+└── AegisPay-*.pdf                  ← the final documents (see below)
 ```
+
+### Final documents
+
+| Document | Covers |
+|---|---|
+| `AegisPay-Architecture-V3.pdf` | The full production architecture (outbox, payment state machine, webhook security, idempotency, refunds, atomic budget, A/B, threat model, SLOs, failure testing) |
+| `AegisPay-LangGraph-GROW-V3.pdf` | The merchant revenue agent flow |
+| `AegisPay-LangGraph-SELL-V3.pdf` | The AI-buyer checkout flow |
+| `AegisPay-Frontend-GROW.pdf` | The merchant console UI |
+| `AegisPay-Frontend-SELL.pdf` | The AI-buyer checkout UI |
+| `AegisPay-Database-Schema.pdf` | The simple, secure, multi-tenant PostgreSQL schema |
 
 ---
 
@@ -127,36 +115,51 @@ AgeisPay/
 
 | You are… | Start with |
 |---|---|
-| Reviewer who needs the shortest path | `docs/00-architecture-master.md` |
-| Strategy / product reviewer | `docs/00b-grow-sell-protect.md` |
+| Reviewer with the shortest path | `docs/00-architecture-master.md` |
+| Product / strategy | `docs/00b-grow-sell-protect.md` |
 | Payments engineer | `docs/13-*`, `docs/14-*`, `docs/15-*` |
-| Policy/risk/authorization engineer | `docs/10-*`, `docs/11-*`, `docs/12-*`, `docs/17-*` |
-| Agent/LLM security engineer | `docs/07-*`, `docs/09-*`, `docs/38-*` |
-| Growth/campaign engineer | `docs/27-*`, `docs/28-*`, `docs/29-*`, `docs/30-*` |
+| Policy / risk / authorization | `docs/10-*`, `docs/11-*`, `docs/12-*`, `docs/17-*` |
+| Agent / LLM security | `docs/07-*`, `docs/09-*`, `docs/38-*` |
+| Growth / campaigns | `docs/27-*`, `docs/28-*`, `docs/29-*`, `docs/30-*` |
 | Protocol engineer | `docs/18-*`, `docs/19-*`, `docs/41-*` |
-| Platform/infra engineer | `docs/21-*` → `docs/23-*` → `docs/26-*` |
-| Hostile reviewer | `docs/36-*`, `00-architecture-master.md §50` |
+| Platform / infra | `docs/21-*` → `docs/23-*` → `docs/26-*` |
+| Hostile reviewer | `docs/36-*`, `docs/00-architecture-master.md` |
 
 ---
 
-## The non-negotiable production invariants
+## Technology
 
-1. **No LLM ever executes a financial API directly.**
-2. **Every financial action passes deterministic authorization + policy.**
-3. **Unknown payment state is never blindly retried.** Unknown ⇒ reconcile.
-4. **Every payment action is idempotent.**
-5. **Material cart changes invalidate authorization.**
-6. **Agents cannot modify their own permissions.**
-7. **Human approvals are scoped, expiring, and non-replayable.**
-8. **Webhooks are untrusted external events until verified.**
-9. **Cross-tenant data access is impossible through normal application paths.**
-10. **Every financial decision has an auditable explanation.**
-11. **AI can grow and sell merchant revenue without unrestricted financial autonomy.**
-12. **Protocol adapters cannot bypass the AegisPay trust layer.**
+- **Backend** — Python / FastAPI (control plane + isolated AI runtime)
+- **AI orchestration** — LangGraph (proposal layer, human-in-the-loop checkpoints)
+- **Database** — PostgreSQL 16 (shared, RLS multi-tenant, JSONB, outbox, audit)
+- **Cache / locks / rate** — Redis (never the source of truth)
+- **Queue** — SQS (at-least-once, idempotent consumers, DLQ)
+- **Frontend** — Next.js + TypeScript + TailwindCSS
+- **Deployment** — AWS: CloudFront + WAF → ALB → ECS (Fargate); RDS, ElastiCache, SQS, S3, Secrets Manager + KMS, OpenTelemetry/CloudWatch
+- **Protocols** — adapter layer over a canonical commerce model (MCP, A2A, ACP, AP2, x402, future UAP) — support/adapt, never unsupported compliance claims
+
+---
+
+## Non-negotiable invariants
+
+1. No LLM ever executes a financial API directly.
+2. Every financial action passes deterministic authorization + policy.
+3. Unknown payment state is never blindly retried — unknown ⇒ reconcile.
+4. Every payment action is idempotent.
+5. Material cart changes invalidate authorization.
+6. Agents cannot modify their own permissions.
+7. Human approvals are scoped, expiring, and non-replayable.
+8. Webhooks are untrusted external events until verified.
+9. Cross-tenant data access is impossible through normal application paths.
+10. Every financial decision has an auditable explanation.
+11. AI can grow and sell merchant revenue without unrestricted financial autonomy.
+12. Protocol adapters cannot bypass the AegisPay trust layer.
 
 ---
 
 ## Status
 
-`DESIGN` — architecture and engineering documentation complete; no application code
-yet. See `docs/40-engineering-roadmap.md` for the build sequence.
+`DESIGN` — architecture and engineering documentation complete. No application code yet;
+see `docs/40-engineering-roadmap.md` for the build sequence. Everything here follows
+production engineering principles and is built to graduate from Razorpay Test Mode to
+production.
