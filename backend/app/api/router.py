@@ -1,4 +1,5 @@
 """HTTP routers (versioned). The money path is reached only after auth + tenant context."""
+
 from fastapi import APIRouter
 
 router = APIRouter(prefix="/v1")

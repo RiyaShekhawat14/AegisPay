@@ -3,6 +3,7 @@
 Webhooks are untrusted external events. A bad signature or a duplicate event id is a safe
 no-op and never changes state.
 """
+
 from __future__ import annotations
 
 from app.modules.payments.provider import PaymentProvider

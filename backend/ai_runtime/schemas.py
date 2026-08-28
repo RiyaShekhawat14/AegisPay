@@ -13,6 +13,7 @@ class CommerceIntent(BaseModel):
 
     The control plane re-validates all of this before any money moves.
     """
+
     agent_id: str
     kind: Literal["discover", "buy", "recommend"]
     summary: str

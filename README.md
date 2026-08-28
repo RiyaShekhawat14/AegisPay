@@ -168,7 +168,12 @@ Run it locally with `docker compose up` (Postgres 16 + Redis + Localstack SQS + 
 
 ## Status
 
-`DESIGN` — architecture and engineering documentation complete. No application code yet;
-see `docs/40-engineering-roadmap.md` for the build sequence. Everything here follows
-production engineering principles and is built to graduate from Razorpay Test Mode to
-production.
+`DESIGN -> SKELETON` — the architecture is documented and a **production-oriented skeleton**
+now exists: `backend/` (FastAPI control plane + isolated AI runtime + migrations + tests)
+and `web/` (Next.js frontend). The deterministic safety logic is implemented and unit-tested
+(payment state machine, policy engine, protocol gateway, idempotency, cart/price/inventory
+guards, atomic campaign budget, refund guard, hash-chained audit), and the full unit suite passes.
+
+**Honesty note:** provider HTTP calls (Razorpay), live protocol transport, and DB/Redis/SQS
+wiring are still to be completed; they are adapter-ready where they exist and are **not**
+claimed as done. See `docs/40-engineering-roadmap.md` for the build sequence.

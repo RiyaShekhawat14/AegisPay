@@ -84,3 +84,18 @@ its public spec is not stable enough to build against.
 | AP2 | agent payments | future mapping |
 | x402 | pay-to-access | future mapping |
 | UAP* | India agentic payments | watch/future |
+
+## Implementation status (honest)
+
+A `protocol_gateway` module is implemented and unit-tested as pure logic (ADR-019):
+- `canonical.py` — `CanonicalIntent` with a forbid-list; no adapter may yield a money action.
+- `adapters.py` — `A2A`, `MCP`, `ACP`, `UCP`, `AP2`, `x402`, `UPI` → canonical actions.
+- `gateway.py` — `enter()` applies authenticate → schema-validate → replay-protect →
+  idempotency → normalize → validate.
+
+**Implemented:** normalization, replay protection, idempotency, and the guarantee that no
+protocol produces a payment execution (verified by `tests/unit/test_protocol_gateway.py`).
+
+**Not yet implemented (wiring pending):** live protocol transport (real MCP/A2A HTTP and
+JSON-RPC frames), an in-DB idempotency store, and per-tenant protocol authentication. These
+are adapter-ready at the API boundary, not claimed as complete.

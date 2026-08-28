@@ -3,10 +3,11 @@
 Never blindly retry a payment in UNKNOWN. Ask the provider what actually happened, then
 transition to PAID or FAILED. Still unknown after bounded attempts → escalate.
 """
+
 from __future__ import annotations
 
 from app.modules.payments.provider import PaymentProvider
-from app.modules.payments.state import PaymentStatus, transition
+from app.modules.payments.state import PaymentStatus
 
 
 async def reconcile(payment_ref: str, provider: PaymentProvider) -> PaymentStatus:

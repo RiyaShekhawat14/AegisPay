@@ -5,6 +5,7 @@ Razorpay secrets, and NO money tools. It compiles agent output into a validated
 CommerceIntent and calls the control plane. Security here is a process/permission
 boundary, not a language split.
 """
+
 from fastapi import FastAPI
 
 from ai_runtime.schemas import CommerceIntent

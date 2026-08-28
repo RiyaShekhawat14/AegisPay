@@ -3,6 +3,7 @@
 Tenant is derived from the authenticated identity here and injected via dependency. The
 handlers never read tenant_id from the request body.
 """
+
 from typing import Annotated
 
 from fastapi import Depends

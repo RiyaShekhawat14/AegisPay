@@ -4,6 +4,7 @@ No provider concept leaks past this interface. The rest of the codebase sees
 PaymentStatus, ProviderOrderID, ProviderPaymentID, amount — never Razorpay/UPI/x402
 specifics.
 """
+
 from __future__ import annotations
 
 from typing import Protocol
@@ -65,8 +66,10 @@ class RazorpayAdapter:
         raise NotImplementedError
 
     async def verify_webhook(self, *, body: bytes, signature: str) -> bool:
-        import hashlib, hmac
+        import hashlib
+        import hmac
         import json
+
         payload = json.loads(body)
         expected = hmac.new(self._secret.encode(), body, hashlib.sha256).hexdigest()
         if not hmac.compare_digest(expected, signature):

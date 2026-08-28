@@ -1,4 +1,5 @@
 """Flushes unpublished outbox rows to the queue (SQS), then marks them published."""
+
 from app.modules.outbox.relay import Envelope, publish
 
 

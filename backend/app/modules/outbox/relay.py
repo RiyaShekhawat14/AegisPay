@@ -3,6 +3,7 @@
 Because the business update and the outbox row commit in the same transaction, there is no
 "committed but not emitted" and no "emitted but not committed".
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass

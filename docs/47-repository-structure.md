@@ -27,7 +27,7 @@ aegispay/
 │   │   ├── main.py           # app factory + lifespan (otel, engine)
 │   │   ├── api/              # router.py + deps.py (auth + tenant context)
 │   │   ├── core/             # config, db (SET LOCAL app.tenant_id), security, rls
-│   │   ├── modules/          # commerce, catalog, policy, risk, authorization, approvals,
+│   │   ├── modules/          # commerce(+safety), catalog, policy, risk, authorization, approvals, protocol_gateway, idempotency,
 │   │   │                     #   payments, providers/razorpay, webhooks, reconciliation,
 │   │   │                     #   refunds, campaigns, opportunities, audit, passport, outbox, events
 │   │   ├── workers/          # webhook processor, reconciliation, outbox relay

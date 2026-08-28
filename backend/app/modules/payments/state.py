@@ -1,4 +1,5 @@
 """Payment state machine. UNKNOWN is first-class and never blindly retried."""
+
 from __future__ import annotations
 
 from enum import Enum
@@ -18,7 +19,11 @@ class PaymentStatus(str, Enum):
 
 ALLOWED: dict[PaymentStatus, set[PaymentStatus]] = {
     PaymentStatus.CREATED: {PaymentStatus.AUTH_PENDING, PaymentStatus.FAILED},
-    PaymentStatus.AUTH_PENDING: {PaymentStatus.PAY_PENDING, PaymentStatus.FAILED, PaymentStatus.UNKNOWN},
+    PaymentStatus.AUTH_PENDING: {
+        PaymentStatus.PAY_PENDING,
+        PaymentStatus.FAILED,
+        PaymentStatus.UNKNOWN,
+    },
     PaymentStatus.PAY_PENDING: {PaymentStatus.PAID, PaymentStatus.FAILED, PaymentStatus.UNKNOWN},
     # UNKNOWN exits only on provider truth (verified webhook / reconciliation)
     PaymentStatus.UNKNOWN: {PaymentStatus.PAID, PaymentStatus.FAILED},

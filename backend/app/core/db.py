@@ -5,11 +5,12 @@ cannot bypass RLS; each request sets the tenant context server-side with SET LOC
 RLS restricts every query to the authenticated merchant's rows. The frontend never decides
 the tenant — it is derived from the authenticated identity.
 """
+
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import get_settings
 

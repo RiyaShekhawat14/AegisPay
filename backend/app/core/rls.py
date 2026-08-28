@@ -3,6 +3,7 @@
 Tenant context is pinned server-side per transaction. The application role cannot bypass
 RLS, so every query is automatically restricted to the caller's merchant.
 """
+
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 

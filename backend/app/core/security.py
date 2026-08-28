@@ -7,7 +7,9 @@ Two authenticator surfaces:
 Tenant is resolved HERE from the authenticated identity and injected into the request
 context. It is never accepted from the request body.
 """
+
 from dataclasses import dataclass
+from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -17,13 +19,13 @@ _bearer = HTTPBearer(auto_error=False)
 
 @dataclass
 class Principal:
-    subject: str          # agent_id or user_id
-    principal_type: str   # AGENT | USER | SERVICE
-    tenant_id: str        # derived from auth, never from the client
+    subject: str  # agent_id or user_id
+    principal_type: str  # AGENT | USER | SERVICE
+    tenant_id: str  # derived from auth, never from the client
 
 
 async def resolve_principal(
-    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
 ) -> Principal:
     if credentials is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "authentication required")

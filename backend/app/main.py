@@ -4,6 +4,7 @@ FastAPI modular monolith. All financial state, policy, risk, authorization, prov
 interaction, audit and reconciliation live here. The isolated AI runtime calls this
 service; it never touches the database or payment keys directly.
 """
+
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI

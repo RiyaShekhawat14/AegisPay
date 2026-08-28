@@ -2,12 +2,15 @@ from app.modules.policy.engine import Decision, Facts, Policy, Rule
 
 
 def _policy(version="v1"):
-    return Policy(version, [
-        Rule("category", "in", ["alcohol", "tobacco"], Decision.DENY, precedence=0),
-        Rule("amount", "gte", 200_000, Decision.HUMAN_APPROVAL_REQUIRED, precedence=10),
-        Rule("amount", "gte", 500_000, Decision.STEP_UP_AUTHENTICATION, precedence=5),
-        Rule("daily_total", "lte", 1_000_000, Decision.ALLOW),
-    ])
+    return Policy(
+        version,
+        [
+            Rule("category", "in", ["alcohol", "tobacco"], Decision.DENY, precedence=0),
+            Rule("amount", "gte", 200_000, Decision.HUMAN_APPROVAL_REQUIRED, precedence=10),
+            Rule("amount", "gte", 500_000, Decision.STEP_UP_AUTHENTICATION, precedence=5),
+            Rule("daily_total", "lte", 1_000_000, Decision.ALLOW),
+        ],
+    )
 
 
 def test_deny_category_wins():

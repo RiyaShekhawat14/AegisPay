@@ -6,10 +6,12 @@ policy admin can, and every change is versioned and audited.
 Decision values:
   ALLOW | DENY | HUMAN_APPROVAL_REQUIRED | STEP_UP_AUTHENTICATION
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from typing import cast
 
 
 class Decision(str, Enum):
@@ -21,8 +23,8 @@ class Decision(str, Enum):
 
 @dataclass(frozen=True)
 class Rule:
-    dimension: str    # amount | category | hour | daily_total | agent
-    operator: str     # lte | gte | eq | in | not_in | between
+    dimension: str  # amount | category | hour | daily_total | agent
+    operator: str  # lte | gte | eq | in | not_in | between
     value: object
     effect: Decision
     precedence: int = 100
@@ -42,7 +44,9 @@ class Policy:
     def __init__(self, version: str, rules: list[Rule]) -> None:
         self.version = version
         # DENY always sinks to the bottom (highest precedence) so it wins.
-        self._rules = sorted(rules, key=lambda r: (0 if r.effect == Decision.DENY else 1, r.precedence))
+        self._rules = sorted(
+            rules, key=lambda r: (0 if r.effect == Decision.DENY else 1, r.precedence)
+        )
 
     def evaluate(self, f: Facts) -> tuple[Decision, list[str]]:
         reasons: list[str] = []
@@ -54,23 +58,22 @@ class Policy:
 
 
 def _matches(rule: Rule, f: Facts) -> bool:
-    val = {
-        "amount": f.amount_minor,
-        "category": f.category,
-        "hour": f.hour,
-        "daily_total": f.agent_daily_spent_minor,
-    }[rule.dimension]
-    op, v = rule.operator, rule.value
-    if op == "lte":
-        return val <= v
-    if op == "gte":
-        return val >= v
-    if op == "eq":
-        return val == v
-    if op == "in":
-        return val in v
-    if op == "not_in":
-        return val not in v
-    if op == "between":
-        return v[0] <= val <= v[1]
+    numeric = {"amount": f.amount_minor, "hour": f.hour, "daily_total": f.agent_daily_spent_minor}
+    if rule.dimension in numeric:
+        val = numeric[rule.dimension]
+        v = rule.value
+        if rule.operator == "lte":
+            return val <= cast(int, v)
+        if rule.operator == "gte":
+            return val >= cast(int, v)
+        if rule.operator == "eq":
+            return val == v
+        if rule.operator == "between":
+            lo, hi = cast(tuple[int, int], v)  # type: ignore[misc]
+            return lo <= val <= hi
+        return False
+    if rule.operator == "in":
+        return cast(list[str], rule.value).__contains__(f.category)
+    if rule.operator == "not_in":
+        return not cast(list[str], rule.value).__contains__(f.category)
     return False

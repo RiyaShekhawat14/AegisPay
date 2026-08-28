@@ -1,9 +1,17 @@
 """Transaction Passport — generated on read from the order trail. There is no passport table."""
+
 from __future__ import annotations
 
 
-def build(order: dict, items: list[dict], authorization: dict, policy: dict,
-          approval: dict | None, payment: dict, audit: dict) -> dict:
+def build(
+    order: dict,
+    items: list[dict],
+    authorization: dict,
+    policy: dict,
+    approval: dict | None,
+    payment: dict,
+    audit: dict,
+) -> dict:
     """Assemble the passport from already-stored rows.
 
     decision-critical values (intent_hash, cart_hash, authorization_hash, policy_version,
@@ -20,7 +28,10 @@ def build(order: dict, items: list[dict], authorization: dict, policy: dict,
         "risk": authorization.get("risk"),
         "amount_minor": order.get("total_minor"),
         "currency": order.get("currency"),
-        "items": [{"product_id": i["product_id"], "line_total_minor": i["line_total_minor"]} for i in items],
+        "items": [
+            {"product_id": i["product_id"], "line_total_minor": i["line_total_minor"]}
+            for i in items
+        ],
         "approval": approval.get("decision") if approval else "NOT_REQUIRED",
         "provider": payment.get("provider"),
         "provider_order_id": payment.get("provider_order_id"),
