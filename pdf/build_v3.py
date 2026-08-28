@@ -94,6 +94,24 @@ flowchart LR
   end
   EX --> A1 --> A2 --> A3 --> A4 --> CP[AegisPay Control Plane]
 """,
+"sell_step": r"""
+flowchart LR
+  U["User asks"] --> I["Typed intent"] --> S["Search catalog"] --> R["Recommend"] --> C["Build cart"]
+  C --> L["Lock price + reserve inventory"] --> V["Validate intent"] --> AUZ["Authorize"]
+  AUZ --> H{Need human?}
+  H -- yes --> HU["Human approves"]
+  HU --> PAY["Razorpay"]
+  H -- no --> PAY
+  PAY --> WH["Verified webhook"] --> RC["Reconcile"] --> PP["Transaction Passport"]
+""",
+"grow_step": r"""
+flowchart LR
+  D["Merchant data"] --> OP["Opportunity"] --> PR["AI proposes"] --> R["Deterministic rules"]
+  R --> E{"Allowed?"}
+  E -- no --> X["Reject + audit"]
+  E -- yes --> EST["Estimate uplift"] --> AP["Merchant approves"] --> B["Reserve budget"]
+  B --> EXE["Run campaign"] --> AB["A/B test"] --> M["Incremental revenue"] --> LEARN["Learn"]
+""",
 "a_gate": r"""
 flowchart TD
   I[Intent] --> P[Policy - limits, categories, hours]
@@ -322,7 +340,7 @@ NOTE = ParagraphStyle("note", parent=BODY, fontSize=9.4, leading=13, textColor=M
 
 def para(t,s=BODY): return Paragraph(t,s)
 def bullets(items):
-    return ListFlowable([ListItem(Paragraph(t,LI), leftIndent=12) for t in items], bulletType="bullet", start="&#8226;", leftIndent=12, bulletFontSize=8, spaceAfter=6)
+    return ListFlowable([ListItem(Paragraph(t,LI), leftIndent=12) for t in items], bulletType="bullet", start="\u2022", leftIndent=12, bulletFontSize=8, spaceAfter=6)
 def numbered(items):
     return ListFlowable([ListItem(Paragraph(t,LI), leftIndent=16) for t in items], bulletType="1", start=1, leftIndent=16, spaceAfter=6)
 def table(rows, widths):
@@ -427,9 +445,11 @@ A+=secA(6,"Service boundaries")+[para("Exactly two services. The AI runtime is i
   diag("a_services","Figure 3 — AI Runtime (no DB, no secrets, no money tools) and Control Plane (owns state, policy, authz, provider, audit)")
 ]
 
-A+=secA(7,"SELL flow")+[para("Intent → catalog → recommendation → cart → authorization → Razorpay → verified webhook → reconciliation → Passport. The full walkthrough is in the SELL document.", BODY)]
+A+=secA(7,"SELL flow")+[diag("sell_step","Figure 3a — SELL step-by-step: user request to Passport"),
+  para("Intent → catalog → recommendation → cart → authorization → Razorpay → verified webhook → reconciliation → Passport. The AI proposes; the control plane authorizes and executes.", BODY)]
 
-A+=secA(8,"GROW flow")+[para("Data → opportunity → proposal → rules → estimate → approval → budget → execution → A/B → incremental measurement → learn. Full detail in the GROW document.", BODY)]
+A+=secA(8,"GROW flow")+[diag("grow_step","Figure 3b — GROW step-by-step: data to measured revenue"),
+  para("Data → opportunity → proposal → rules → estimate → approval → budget → execution → A/B → incremental measurement → learn. The AI proposes; fixed rules and merchant approval gate it.", BODY)]
 
 A+=[PageBreak()]+secA(9,"Policy / Risk / Authorization")+[diag("a_gate","Figure 4 — Every money action passes a deterministic gate"),
   bullets(["<b>Policy</b> is versioned and merchant-owned; the AI cannot change it.",

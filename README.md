@@ -81,10 +81,10 @@ output, checkpointing).
 ## Repository layout
 
 ```
-AgeisPay/
+aegispay/
 ├── README.md                       ← you are here
 ├── CONTRIBUTING.md                 ← how to change and regenerate docs
-├── .github/workflows/ci.yml        ← validation (OpenAPI, docs, build scripts)
+├── .github/workflows/              ← CI (compile backend, validate OpenAPI/docs, run on PR)
 ├── api/
 │   └── openapi.yaml                ← OpenAPI 3.1 contract
 ├── docs/                           ← engineering documentation set
@@ -92,11 +92,19 @@ AgeisPay/
 │   ├── 00b-grow-sell-protect.md    ← product model
 │   ├── 01-product-requirements.md  →  54-success-metrics.md
 │   └── 03-architecture-decision-records/  ← ADR-001 … ADR-018
-├── pdf/
-│   ├── build_*.py                  ← PDF generators (mermaid + reportlab)
-│   └── _html/*.html                ← frontend & live-flow mockup sources
-└── AegisPay-*.pdf                  ← the final documents (see below)
+├── pdf/                            ← diagram/PDF generators + frontend mockup sources
+├── backend/                        ← all server code (Go-free: Python/FastAPI)
+│   ├── pyproject.toml · .env.example · compose.yaml · Makefile
+│   ├── Dockerfile · Dockerfile.ai   ← control plane + isolated AI runtime images
+│   ├── app/                         ← CONTROL PLANE (FastAPI): api, core, modules, workers
+│   ├── ai_runtime/                  ← ISOLATED AI RUNTIME (no DB, no secrets, no money tools)
+│   ├── migrations/0001_init.sql     ← v1 schema + RLS + indexes
+│   └── tests/                       ← unit, integration, e2e, redteam
+└── web/                            ← merchant console + AI buyer (Next.js + TS + Tailwind)
+    └── src/ (app, components, lib, types)
 ```
+
+Run it locally with `docker compose up` (Postgres 16 + Redis + Localstack SQS + both services). A production `docs/21-infrastructure.md` describes an AWS deployment (CloudFront → ALB → ECS, RDS, Redis, SQS, Secrets Manager) to add when an AWS account is available.
 
 ### Final documents
 
@@ -136,7 +144,7 @@ AgeisPay/
 - **Cache / locks / rate** — Redis (never the source of truth)
 - **Queue** — SQS (at-least-once, idempotent consumers, DLQ)
 - **Frontend** — Next.js + TypeScript + TailwindCSS
-- **Deployment** — AWS: CloudFront + WAF → ALB → ECS (Fargate); RDS, ElastiCache, SQS, S3, Secrets Manager + KMS, OpenTelemetry/CloudWatch
+- **Deployment** — local-first: `docker compose up` (Postgres 16 + Redis + Localstack SQS). Production AWS deployment (CloudFront → ALB → ECS, RDS, ElastiCache, SQS, S3, Secrets Manager + KMS, OpenTelemetry/CloudWatch) is documented in `docs/21-*` and added when an AWS account is available
 - **Protocols** — adapter layer over a canonical commerce model (MCP, A2A, ACP, AP2, x402, future UAP) — support/adapt, never unsupported compliance claims
 
 ---
