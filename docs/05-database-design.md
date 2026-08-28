@@ -27,7 +27,7 @@
 ### 2.1 merchants
 - Columns: `id, tenant_id, name, slug UNIQUE, business_type, country, currency,
   status, default_autonomy_level, razorpay_key_id, kms_ref, created_at, updated_at, deleted_at`.
-- PK `id`; FK none (top of tenant). Unique `(tenant_id, slug)`.
+- PK id; FK none (top of tenant). Unique (tenant_id, slug). **Tenant ownership:** one merchant per row — a merchant is its own tenant, and nothing can be added or referenced across merchants.
 - `razorpay_key_id` is the public key id only. Index `(tenant_id, status)`.
 - Soft delete: yes. Encryption: `razorpay_key_id` is a public id (not encrypted);
   the actual handle is in Secrets Manager.
@@ -79,7 +79,11 @@
   description, category, price_minor, currency, status, allow_list BOOLEAN, block_list BOOLEAN,
   metadata JSONB, created_at, updated_at, deleted_at`.
 - FK `catalog_id→catalogs`. Index `(tenant_id, category, status)`, GIN on `name_indexed`.
-- Price is server-side authority. Soft delete: yes.
+- Price is server-side authority. **Product ownership lock:** a product belongs to exactly
+  one merchant (tenant). `unique (tenant_id, sku)` and every query is tenant-scoped, so two
+  merchants cannot add or share the same product, and a cart/order may only reference
+  products of its own merchant (a cross-merchant product reference is rejected).
+- Soft delete: yes.
 
 ### 2.10 catalogs
 - Columns: `id, tenant_id, name, slug, description, status, created_at, updated_at, deleted_at`.

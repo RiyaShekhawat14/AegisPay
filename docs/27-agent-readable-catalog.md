@@ -82,6 +82,11 @@ Merchant import (CSV/API) → Normalize to canonical model → Validate types/ra
 - **Deterministic quantity/price.** Price and quantity come from the Catalog and cart
   server-side, never from parsed prose.
 - **PII-free.** The catalog carries no customer PII.
+- **Product ownership lock.** A product is owned by exactly one merchant (tenant),
+  enforced by `unique (tenant_id, sku)` and tenant-scoped queries. An agent building a
+  cart can only add products belonging to the merchant it is buying from; a product
+  reference that resolves to a different merchant is rejected. This is what prevents
+  two merchants from adding the same product or a catalog injection across merchants.
 
 ## 6. Verification
 

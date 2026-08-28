@@ -48,6 +48,10 @@ because the platform authorization is bound to the specific transaction digest.
 
 - Unavailable authorization service → **deny** (new money actions blocked).
 - Any ambiguity → deny/escalate. No "probably fine" path.
+- **Product ownership is a binding input.** Authorization is only valid if every cart
+  item's product belongs to the target merchant (`tenant_id` matches). A cross-merchant
+  or tenant-mismatched product makes the authorization invalid — this is part of the
+  transaction binding, not a separate check to skip.
 
 ## 6. Replay & theft defenses
 
