@@ -6,6 +6,7 @@ pdf/_build_v3/
 pdf/_dbg_
 pdf/_build_dbe/
 pdf/_build_v4/
+pdf/_build_v4s/
 *.mmd
 
 # Python
