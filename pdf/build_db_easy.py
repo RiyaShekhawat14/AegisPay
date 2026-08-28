@@ -114,7 +114,7 @@ NOTE=ParagraphStyle("note",parent=BODY,fontSize=8.8,leading=12.3,textColor=MUT)
 SMALL=ParagraphStyle("small",parent=BODY,fontSize=9.2,leading=12,textColor=INK)
 
 def para(t,s=BODY): return Paragraph(t,s)
-def bullets(it): return ListFlowable([ListItem(Paragraph(t,LI),leftIndent=12) for t in it],bulletType="bullet",start="&#8226;",leftIndent=12,bulletFontSize=8,spaceAfter=5)
+def bullets(it): return ListFlowable([ListItem(Paragraph(t,LI),leftIndent=12) for t in it],bulletType="bullet",start="\u2022",leftIndent=12,bulletFontSize=8,spaceAfter=4)
 def table(rows,widths,header=True):
     data=[]
     if header: data.append([Paragraph(c,TH) for c in rows[0]])
@@ -226,36 +226,25 @@ TBL=[
 ]
 
 def render_table(t):
-    fl=[para(f"TABLE: {t['name']}",H3)]
-    fl+=[para("Purpose",SMALL),para(t["purpose"],NOTE)]
-    fl+=[para("Columns",SMALL)]
     rows=[["Column","Type","Meaning"]]
     for c in t["cols"]: rows.append([c[0],c[1],c[2]])
-    fl+=[table(rows,[46*mm,26*mm,102*mm])]
-    fl+=[para("Primary Key",SMALL),para("<b>"+t["pk"]+"</b>",NOTE)]
-    fl+=[para("Foreign Keys",SMALL),bullets([f" <b>{f}</b>" if "→" not in f else f for f in t["fks"]]) if False else bullets([f for f in t["fks"]])]
-    fl+=[para("Important Indexes",SMALL),bullets([f for f in t["idxs"]])]
-    fl+=[para("Used by",SMALL)]
-    rows2=[]
+    # used-by rows: a compact two-column list (YES green, NO-gray "no direct access")
+    ub=[["Service","Access"]]
     for s in SERVICES:
         if t["used"][s]:
-            rows2.append([f"<font color=\"{OK.hexval().replace('0x','#').upper()}\">&#10003;</font>", s])
-    for s in SERVICES:
-        if not t["used"][s]:
-            rows2.append([f"<font color=\"{ER.hexval().replace('0x','#').upper()}\">&#10007;</font> <font color=\"{MUT.hexval().replace('0x','#').upper()}\">direct access</font>", s])
-    fl.insert(0, KeepTogether([
+            ub.append([f"<font color=\"{OK.hexval().replace('0x','#').upper()}\">&#10003; {s}</font>","yes"])
+        else:
+            ub.append([f"<font color=\"{MUT.hexval().replace('0x','#').upper()}\">&#10007; {s}</font>","no direct access"])
+    fl=[Spacer(1,4),
         para(f"TABLE: {t['name']}",H3),
         para("Purpose",SMALL), para(t["purpose"],NOTE),
-        para("Columns",SMALL),
-        table(rows,[46*mm,26*mm,102*mm]),
+        para("Columns",SMALL), table(rows,[46*mm,26*mm,102*mm]),
         para("Primary Key",SMALL), para("<b>"+t["pk"]+"</b>",NOTE),
         para("Foreign Keys",SMALL), bullets([f for f in t["fks"]]),
         para("Important Indexes",SMALL), bullets([f for f in t["idxs"]]),
-        para("Used by",SMALL),
-        table2([[("<font color=\""+ (OK.hexval().replace('0x','#').upper()) +"\">&#10003;</font> "+s if t["used"][s] else ("<font color=\""+(ER.hexval().replace('0x','#').upper())+"\">&#10007;</font> <font color=\""+(MUT.hexval().replace('0x','#').upper())+"\">direct access</font> "+s)), s] for s in SERVICES],[26*mm,60*mm])
-    ]))
-    fl=fl[1:]
-    return fl
+        para("Used by",SMALL), table2(ub,[96*mm,28*mm]),
+        Spacer(1,10)]
+    return [KeepTogether(fl)]
 
 F=[Spacer(1,20), para("AEGISPAY",TITLE), para("Production Database Schema",SUB),
    Spacer(1,8), para("Simple, Secure &amp; Multi-Tenant PostgreSQL Design.",BODY),
