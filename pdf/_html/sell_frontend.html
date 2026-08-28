@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<style>
+@page { size: A4; margin: 10mm; }
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--red:#A1123F;--red2:#6F1D39;--red3:#4C0E22;--ink:#15121F;--mut:#6D6475;--bg:#FFF7F8;--card:#fff;--line:#F8DCE1;--bord:#EFE2E6}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes shimmer{0%{background-position:-400px 0}100%{background-position:400px 0}}
+@keyframes slideL{from{opacity:0;transform:translateX(-18px)}to{opacity:1;transform:translateX(0)}}
+@keyframes typing{0%,60%,100%{opacity:.2}30%{opacity:1}}
+@keyframes pop{0%{transform:scale(.6);opacity:0}100%{transform:scale(1);opacity:1}}
+@keyframes floatUp{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.typing span{display:inline-block;width:6px;height:6px;margin:0 2px;border-radius:50%;background:#6F1D39;animation:typing 1.4s infinite}
+.typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+.check{width:70px;height:70px;animation:pop .5s ease}
+.check circle{stroke:#6F1D39;stroke-width:3;fill:none}
+.check path{stroke:#6F1D39;stroke-width:4;fill:none;stroke-linecap:round;stroke-linejoin:round}
+body{font-family:'Segoe UI',system-ui,Inter,Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:#F3ECEF}
+.cover{background:linear-gradient(135deg,#4C0E22 0%,#A1123F 55%,#C43A5C 100%);color:#fff;padding:34px 30px;border-radius:18px;margin-bottom:20px;position:relative;overflow:hidden}
+.cover::after{content:"";position:absolute;right:-40px;top:-40px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.12)}
+.cover h1{font-size:30px}.cover p{color:#FFE1E7;margin-top:8px;font-size:14px;max-width:720px}
+.cover .tag{display:inline-block;background:rgba(255,255,255,.22);padding:4px 12px;border-radius:999px;font-size:12px;margin-bottom:14px;border:1px solid rgba(255,255,255,.35)}
+.screen{background:#fff;border:1px solid var(--bord);border-radius:14px;overflow:hidden;box-shadow:0 18px 42px rgba(76,14,34,.10)}
+.browser{display:flex;align-items:center;gap:8px;background:#1B1526;padding:7px 12px}
+.dot{width:10px;height:10px;border-radius:50%}.dot.r{background:#F04438}.dot.y{background:#F79009}.dot.g{background:#22C55E}
+.addr{flex:1;background:#2a2233;color:#cabfd0;font-size:11px;padding:4px 10px;border-radius:6px}
+.phonebox{background:linear-gradient(180deg,#FFEDF1,#FFF7F8);padding:16px 18px}
+.chrome{max-width:470px;margin:0 auto;background:#fff;border:1px solid #F3D6DC;border-radius:18px;overflow:hidden;box-shadow:0 18px 46px rgba(76,14,34,.16)}
+.top{background:linear-gradient(135deg,#4C0E22,#A1123F);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:10px}
+.top .logo{width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:16px}
+.top .st{flex:1}.top .st b{font-size:14px}.top .st small{display:block;color:#FFD7DE;font-size:10px}
+.onl{font-size:10px;color:#9cf0b1;font-weight:600;display:flex;align-items:center;gap:5px}
+.ava{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:14px}
+.body{padding:14px;min-height:330px;background:var(--bg)}
+.msg{max-width:82%;padding:9px 12px;border-radius:12px;font-size:12.5px;line-height:1.5;margin-bottom:10px}
+.ai{background:#fff;border:1px solid var(--bord);color:var(--ink);border-bottom-left-radius:2px;animation:slideL .3s ease}
+.user{background:linear-gradient(135deg,#A1123F,#6F1D39);color:#fff;margin-left:auto;border-bottom-right-radius:2px}
+.input{display:flex;gap:8px;border-top:1px solid #FBE9ED;padding:11px 14px;background:#fff}
+.input .tb{flex:1;border:1px solid var(--bord);border-radius:9px;padding:8px 12px;font-size:12.5px;color:var(--ink)}
+.send{background:linear-gradient(135deg,#A1123F,#6F1D39);color:#fff;border:none;border-radius:9px;padding:8px 13px;font-weight:700;font-size:12px}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+.pc{border:1px solid var(--bord);border-radius:13px;padding:10px;background:#fff;transition:transform .2s,box-shadow .2s}
+.pc:hover{transform:translateY(-3px);box-shadow:0 12px 26px rgba(76,14,34,.12)}
+.pc .im{height:70px;border-radius:10px;background:linear-gradient(135deg,#FFDFE6,#FFEFF2);display:flex;align-items:center;justify-content:center;font-size:26px}
+.pc .nm{font-size:12px;font-weight:700;margin:7px 0 2px}
+.pc .pr{font-size:11px;color:var(--red);font-weight:800}
+.pc .meta{font-size:9.5px;color:var(--mut);margin:3px 0}
+.pc .add{margin-top:6px;background:linear-gradient(135deg,#A1123F,#6F1D39);color:#fff;border:none;border-radius:8px;padding:5px 10px;font-size:10px;font-weight:700;width:100%}
+.badge{font-size:9.5px;color:#16A34A;font-weight:700}
+.lit{font-size:11px;color:#55414d;margin:6px 0 8px;line-height:1.5}
+.row{display:flex;gap:10px;align-items:center;border:1px solid var(--bord);border-radius:12px;padding:10px;margin-bottom:8px;background:#fff}
+.row .im{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,#FFDFE6,#FFEFF2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.row .tx{flex:1}.row .nm{font-size:12.5px;font-weight:700}.row .pr{font-size:11px;color:var(--red);font-weight:800}
+.qty{display:flex;align-items:center;gap:6px}.qty span{font-size:12px}
+.qty button{width:20px;height:20px;border:1px solid var(--bord);background:#fff;border-radius:6px;font-size:12px;color:#6F1D39}
+.sum{margin:10px 0;padding-top:8px;border-top:1px solid #FBE9ED;font-size:12.5px}
+.sum .l{display:flex;justify-content:space-between;margin-bottom:4px}
+.cta{width:100%;background:linear-gradient(135deg,#A1123F,#6F1D39);color:#fff;border:none;border-radius:11px;padding:11px;font-size:13px;font-weight:800;margin-top:8px;box-shadow:0 8px 18px rgba(161,18,63,.3);transition:transform .15s}
+.cta:hover{transform:translateY(-1px)}
+.cta.grn{background:linear-gradient(135deg,#16A34A,#15803D);box-shadow:0 8px 18px rgba(22,163,74,.3)}
+.cta.ghg{background:#fff;color:#4A3A46;border:1px solid var(--bord);box-shadow:none}
+.pcard{border:1px solid var(--bord);border-radius:13px;padding:12px;background:#fff;margin-bottom:10px}
+.lab{font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.val{font-size:12.5px;color:var(--ink);font-weight:700}
+.split{display:flex;gap:12px}.split>div{flex:1;background:#FFF1F4;border:1px solid var(--bord);border-radius:11px;padding:10px}
+.grn{color:#16A34A}.amber{color:#B45309}.red{color:#DC2626}.blue{color:#6F1D39}
+.tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700}
+.tg-green{background:#DCFCE7;color:#15803D}.tg-amber{background:#FEF3C7;color:#B45309}.tg-red{background:#FFE4E9;color:#6F1D39}
+.shim{width:100%;height:10px;border-radius:6px;background:linear-gradient(90deg,#FBDCE2 25%,#FFF4F6 37%,#FBDCE2 63%);background-size:400px 100%;animation:shimmer 1.4s infinite;margin:4px 0}
+.annot{background:#fff;border:1px dashed #F7AFC0;border-radius:12px;padding:12px 15px;margin:10px 0 22px}
+.annot .tt{font-size:12px;font-weight:800;color:#6F1D39;margin-bottom:6px}
+.annot ul{font-size:11px;color:#4A3A46;list-style:none}
+.annot li{margin:2px 0}.annot li b{color:#A1123F;font-weight:700}
+.kpis{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:10px 0 4px}
+.kpi{background:#FFF1F4;border:1px solid var(--bord);border-radius:11px;padding:10px;text-align:center}
+.kpi .n{font-size:16px;font-weight:800;color:var(--ink)}.kpi .l{font-size:9.5px;color:var(--mut)}
+.spinner{width:15px;height:15px;border-radius:50%;border:2px solid #FFD3DC;border-top-color:#A1123F;display:inline-block;animation:spin .8s linear infinite;vertical-align:middle;margin-left:6px}
+</style></head>
+<body>
+
+<div class="cover">
+  <div class="tag">AEGISPAY · SELL — AI BUYER CHECKOUT</div>
+  <h1>Sell to AI Buyers (Frontend Design)</h1>
+  <p>A polished, animated storefront. A person asks the AI to buy, sees recommendations, consents, pays — with a safe approval and a verified Passport. The AI can think; it can never move money alone.</p>
+</div>
+
+<!-- S1 chat -->
+<section class="screen"><div class="browser"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="addr">shop.aegispay.com/chat</div></div>
+<div class="phonebox"><div class="chrome">
+ <div class="top"><div class="logo">🛡</div><div class="st"><b>AegisPay · ABC Store</b><small>shopping-agent v3 · <span class="onl"><span class="onl-pulse" style="width:6px;height:6px;border-radius:50%;background:#9cf0b1;display:inline-block;animation:pulse 1.8s infinite"></span> secure</span></small></div><div class="ava">👤</div></div>
+ <div class="body">
+   <div class="msg ai">Hi! I’m your shopping assistant from <b>ABC Store</b>. Tell me what you need and I’ll find the best option within your limits.</div>
+   <div class="msg user">Find running shoes under ₹4,000 for daily running.</div>
+   <div class="msg ai">Sure. Searching the store catalog… <span class="spinner"></span></div>
+   <div class="msg ai"><span class="typing"><span></span><span></span><span></span></span> Prices are real and fixed by the store — I can only show you these.</div>
+ </div>
+ <div class="input"><div class="tb">Type a message…</div><button class="send">Ask</button></div>
+</div></div></section>
+<div class="annot"><div class="tt">S1 · AI buyer chat (animated)</div><ul>
+<li><b>Enter:</b> natural language in the chat box (<i>“Find running shoes under ₹4,000”</i>).</li>
+<li><b>See:</b> the secure header with a <b>pulse</b>, a <b>loading spinner</b>, and <b>typing dots</b> while the AI works — then it states it only shows real store prices.</li></ul></div>
+
+<!-- S1b parse->JSON->search -->
+<section class="screen"><div class="browser"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="addr">aegispay core · intent compiler</div></div>
+<div class="phonebox"><div class="chrome">
+ <div class="top"><div class="logo">🛡</div><div class="st"><b>Behind the scenes</b><small>how your sentence becomes a database search</small></div></div>
+ <div class="body">
+   <div class="pcard"><div class="lab">What you typed</div><div class="val">“Find running shoes under ₹4,000 for daily running.”</div></div>
+   <div class="pcard"><div class="lab">Parsed into a structured query (JSON)</div><pre style="font-family:Consolas,monospace;font-size:10.5px;line-height:1.5;color:#6D6475;margin:0;white-space:pre-wrap">{
+  "action": "discover &amp; buy",
+  "product": { "type": "running_shoes", "category": "shoes/running" },
+  "quantity": 1,
+  "budget_max_minor": 400000,
+  "attributes": { "use_case": "daily_running" }
+}</pre>
+   <div class="lit" style="margin-top:6px"><span class="badge">✓ validated</span> This JSON is checked (typed schema) before it is used. It is <b>untrusted input</b>.</div></div>
+   <div class="pcard"><div class="lab">Used to search the merchant catalog (PostgreSQL)</div><pre style="font-family:Consolas,monospace;font-size:10.5px;line-height:1.5;color:#6D6475;margin:0;white-space:pre-wrap">SELECT * FROM products
+WHERE tenant_id = :store
+  AND status = 'active'
+  AND category = 'shoes/running'
+  AND price_minor &lt;= 400000;</pre></div>
+   <div class="lit"><span class="badge">Found 3</span> Prices come from the database — the AI never makes them up.</div>
+ </div>
+</div></div></section>
+<div class="annot"><div class="tt">S1b · Parse → JSON → database search (the core)</div><ul>
+<li><b>The pipeline:</b> customer text → LLM parses it → a <b>structured JSON intent</b> → validated → <b>a real search</b> over the merchant’s catalog (by category, price ≤ budget, active).</li>
+<li><b>Safety:</b> the JSON is untrusted and schema-checked; the search is parameterized; results use <b>server-owned prices</b> only. This same intent is hashed into the <b>Transaction Passport</b> for proof later.</li></ul></div>
+
+<!-- S2 recommendations -->
+<section class="screen"><div class="browser"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="addr">shop.aegispay.com/recommend</div></div>
+<div class="phonebox"><div class="chrome">
+ <div class="top"><div class="logo">🛡</div><div class="st"><b>Best matches</b><small>3 found under ₹4,000</small></div></div>
+ <div class="body">
+   <div class="shim"></div>
+   <div class="cards">
+     <div class="pc"><div class="im">👟</div><div class="nm">Runner Pro 42</div><div class="meta">shoes/running · in stock</div><div class="pr">₹3,499</div><button class="add">Add to cart</button></div>
+     <div class="pc"><div class="im">👟</div><div class="nm">Street Run 40</div><div class="meta">shoes/running · in stock</div><div class="pr">₹2,799</div><button class="add">Add to cart</button></div>
+     <div class="pc"><div class="im">🧦</div><div class="nm">Run Sock 3-pack</div><div class="meta">apparel · best pairing</div><div class="pr">₹499</div><button class="add">Add to cart</button></div>
+     <div class="pc"><div class="im">🥾</div><div class="nm">Trail One 43</div><div class="meta">shoes/trail · low stock</div><div class="pr">₹3,899</div><button class="add">Add to cart</button></div>
+   </div>
+   <div class="lit"><span class="badge">Why these?</span> Based on your ask, budget and store availability. Prices are real.</div>
+ </div>
+</div></div></section>
+<div class="annot"><div class="tt">S2 · Recommendations</div><ul>
+<li><b>Enter:</b> “Add to cart”. The AI can only add what the store sells at the store price.</li>
+<li><b>See:</b> a <b>shimmer</b> loading state while results stream, then cards that <b>lift on hover</b>. The “best pairing” hint comes from the growth engine — never an upcharge.</li></ul></div>
+
+<!-- S3 cart -->
+<section class="screen"><div class="browser"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="addr">shop.aegispay.com/cart</div></div>
+<div class="phonebox"><div class="chrome">
+ <div class="top"><div class="logo">🛡</div><div class="st"><b>Your cart</b><small>locked &amp; hashed</small></div></div>
+ <div class="body">
+   <div class="row"><div class="im">👟</div><div class="tx"><div class="nm">Runner Pro 42</div><div class="pr">₹3,499</div></div><div class="qty"><button>−</button><span>1</span><button>+</button></div></div>
+   <div class="row"><div class="im">🧦</div><div class="tx"><div class="nm">Run Sock 3-pack</div><div class="pr">₹499</div></div><div class="qty"><button>−</button><span>1</span><button>+</button></div></div>
+   <div class="sum">
+     <div class="l"><span>Subtotal</span><span>₹3,998</span></div>
+     <div class="l"><span>Shipping</span><span>₹0</span></div>
+     <div class="l"><b><span>Total</span><span>₹3,998</span></b></div>
+   </div>
+   <div class="lit"><span class="badge">🔒 Capped at ₹4,000</span> This card is within your spending limit. The amount is final — the AI can’t change it.</div>
+   <button class="cta">Proceed to checkout</button>
+ </div>
+</div></div></section>
+<div class="annot"><div class="tt">S3 · Cart (server-owned prices)</div><ul>
+<li><b>Enter:</b> quantity +/− only — the <b>amount is final and fixed by the store</b>.</li>
+<li><b>See:</b> total, the “capped at ₹4,000” limit, and <b>locked &amp; hashed</b> so the cart can’t be silently changed later.</li></ul></div>
+
+<!-- S4 consent -->
+<section class="screen"><div class="browser"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="addr">shop.aegispay.com/consent</div></div>
+<div class="phonebox"><div class="chrome">
+ <div class="top"><div class="logo">🛡</div><div class="st"><b>One last confirmation</b><small>you stay in control</small></div></div>
+ <div class="body">
+   <div class="pcard"><div class="lab">Amount</div><div class="val">₹3,998</div><div class="lit" style="margin:6px 0 0">to <b>ABC Store</b> via Razorpay</div></div>
+   <div class="split"><div><div class="lab">What it is</div><div class="val">Runner Pro + Socks</div></div><div><div class="lab">Buying for you</div><div class="val">shopping-agent v3</div></div></div>
+   <div class="lit" style="margin-top:10px"><span class="badge">✓ Authorized</span> A valid mandate covers this amount. You can revoke it any time.</div>
+   <button class="cta grn">Authorize &amp; pay ₹3,998</button>
+   <div class="lit">Low risk · auto-approved by policy. <b>No human needed.</b></div>
+ </div>
+</div></div></section>
+<div class="annot"><div class="tt">S4 · Consent before payment</div><ul>
+<li><b>Enter:</b> “Authorize &amp; pay” — the one explicit yes that lets money move.</li>
+<li><b>See:</b> amount, store, agent, mandate status, and “low risk · auto-approved”. Consent is explicit and revocable.</li></ul></div>
+
+<!-- S5 approval -->
+<section class="screen"><div class="browser"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="addr">shop.aegispay.com/approval</div></div>
+<div class="phonebox"><div class="chrome">
+ <div class="top"><div class="logo">🛡</div><div class="st"><b>Approval needed</b><small>a person must confirm</small></div></div>
+ <div class="body">
+   <div class="pcard"><div class="lab">Amount · High risk</div><div class="val">₹8,999 <span class="tag tg-amber">HIGH</span></div>
+     <div class="lit">Electronics bundle · first time in this category · new device · new merchant.</div></div>
+   <div class="split"><div><div class="lab">Who wants this</div><div class="val">shopping-agent v3</div></div><div><div class="lab">Policy</div><div class="val">policy_v12</div></div></div>
+   <div class="lit" style="margin-top:9px"><span class="badge">Why here?</span> This is above your auto-limit, so a human decides.</div>
+   <button class="cta grn">Approve this purchase</button>
+   <button class="cta ghg">Reject with reason</button>
+   <div class="lit">Scoped to this exact cart, expires soon, can’t be reused.</div>
+ </div>
+</div></div></section>
+<div class="annot"><div class="tt">S5 · Human-in-the-loop (high value)</div><ul>
+<li><b>Enter:</b> Approve / Reject with a reason.</li>
+<li><b>See:</b> what’s bought, amount, why risk is high, who asked (the agent), and the policy version — the full picture to decide confidently.</li></ul></div>
+
+<!-- S6 passport -->
+<section class="screen"><div class="browser"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="addr">shop.aegispay.com/payment/order_82931</div></div>
+<div class="phonebox"><div class="chrome">
+ <div class="top"><div class="logo">🛡</div><div class="st"><b>Paid ✓</b><small>transaction txn_82931</small></div></div>
+ <div class="body" style="text-align:center">
+   <svg class="check" viewBox="0 0 70 70"><circle cx="35" cy="35" r="30"></circle><path d="M22 36 L31 45 L49 25"></path></svg>
+   <div class="kpis"><div class="kpi"><div class="n">₹3,998</div><div class="l">Amount</div></div><div class="kpi"><div class="n" style="color:#16A34A">SUCCESS</div><div class="l">Payment</div></div><div class="kpi"><div class="n" style="color:#6F1D39">VERIFIED</div><div class="l">Audit</div></div></div>
+   <div class="pcard" style="text-align:left"><div class="lab">Transaction Passport</div>
+     <div class="split"><div><div class="lab">Agent</div><div class="val">shopping-agent v3</div></div><div><div class="lab">Merchant</div><div class="val">ABC Store</div></div></div>
+     <div class="split" style="margin-top:9px"><div><div class="lab">Intent hash</div><div class="val blue">abc…</div></div><div><div class="lab">Cart hash</div><div class="val blue">def…</div></div></div>
+     <div class="lit" style="margin-top:8px">Policy <b>policy_v12</b> · Risk <b>21 / LOW</b> · Approval <b>NOT REQUIRED</b> · Provider <b>Razorpay</b> · Order <b>order_xxx</b></div>
+   </div>
+   <div class="lit"><span class="badge">🔒 Integrity verified</span> Every step recorded. The AI could not move this money on its own.</div>
+ </div>
+</div></div></section>
+<div class="annot"><div class="tt">S6 · Payment success + Transaction Passport (animated check)</div><ul>
+<li><b>Enter:</b> nothing — it’s the proof. A <b>draw-on checkmark</b> animates on success.</li>
+<li><b>See:</b> the Passport (agent, merchant, intent/cart hashes, policy version, risk, approval, Razorpay order id) and “<b>Audit Integrity: VERIFIED</b>”.</li></ul></div>
+
+<!-- S7 audit timeline -->
+<section class="screen"><div class="browser"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span><div class="addr">shop.aegispay.com/payment/order_82931/audit</div></div>
+<div class="phonebox"><div class="chrome">
+ <div class="top"><div class="logo">🛡</div><div class="st"><b>Transaction audit trail</b><small>txn_82931 · every step, recorded</small></div></div>
+ <div class="body">
+   <div style="display:flex;align-items:center;gap:9px;margin-bottom:12px">
+     <span class="pulse" style="background:#16A34A"></span>
+     <b style="font-size:12px">Chain integrity: VERIFIED</b>
+     <span style="font-size:10px;color:#6D6475">· hash-chained &amp; anchored</span>
+   </div>
+   <div style="border-left:2px solid #F6C7D1;margin-left:9px;padding-left:16px">
+     <div style="margin-bottom:12px"><div class="lab">10:41:20 · intent.created</div><div class="val" style="font-weight:600">“Find running shoes under ₹4,000”</div><div class="lit" style="margin:2px 0 0;font-size:10px">intent_hash <b>abc…</b> · agent shopping-agent v3</div></div>
+     <div style="margin-bottom:12px"><div class="lab">10:41:21 · cart.created</div><div class="val">Runner Pro + Socks</div><div class="lit" style="margin:0;font-size:10px">cart_hash <b>def…</b> · locked &amp; hashed</div></div>
+     <div style="margin-bottom:12px"><div class="lab">10:41:23 · policy.evaluated</div><div class="val" style="color:#16A34A">ALLOW · policy_v12</div></div>
+     <div style="margin-bottom:12px"><div class="lab">10:41:24 · risk.assessed</div><div class="val">21 / LOW</div></div>
+     <div style="margin-bottom:12px"><div class="lab">10:41:25 · authorization.issued</div><div class="val">bound to cart · valid</div></div>
+     <div style="margin-bottom:12px"><div class="lab">10:41:26 · order.created</div><div class="val">order_xxx · ₹3,998</div></div>
+     <div style="margin-bottom:12px"><div class="lab">10:41:26 · payment.initiated</div><div class="val">Razorpay · order_xxx</div></div>
+     <div style="margin-bottom:12px"><div class="lab">10:41:28 · payment.succeeded</div><div class="val">₹3,998 · SUCCESS</div></div>
+     <div style="margin-bottom:12px"><div class="lab">10:41:28 · passport.verified</div><div class="val" style="color:#16A34A">Audit Integrity: VERIFIED</div></div>
+   </div>
+   <div class="pcard"><div class="lab">Raw log (last line)</div><pre style="font-family:Consolas,monospace;font-size:10px;line-height:1.4;color:#6D6475;margin:0;white-space:pre-wrap">{"event":"payment.succeeded","txn":"txn_82931","actor":"webhook:razorpay","amount":399800,"previous_hash":"9f3…","event_hash":"e2a…"}</pre></div>
+ </div>
+</div></div></section>
+<div class="annot"><div class="tt">S7 · Transaction audit trail (everything is visible)</div><ul>
+<li><b>See:</b> the full timeline of this purchase — intent → cart → policy → risk → authorization → order → payment → success → Passport verified, each with a hash.</li>
+<li><b>Why it matters:</b> this is the one place a customer or auditor can see <b>every</b> step and prove the AI never moved money on its own. It is append-only and tamper-proof.</li></ul></div>
+
+</body></html>

@@ -1,0 +1,938 @@
+openapi: 3.1.0
+info:
+  title: AegisPay API
+  description: >-
+    The Trust & Growth Layer for Agentic Commerce. AegisPay lets AI agents propose
+    financial actions, but only the deterministic control plane may authorize and
+    execute them. Money is in minor units (paise/kobo). Tenancy is derived from auth,
+    never from the request body. Every mutating endpoint honours the `Idempotency-Key`
+    header and emits an audit event.
+  version: 1.0.0
+  x-invariants:
+    - No LLM reaches a money tool.
+    - Unknown payment state is never blindly retried.
+    - Material cart changes invalidate authorization.
+    - Human approvals are scoped, expiring, and non-replayable.
+
+servers:
+  - url: https://api.aegispay.dev/v1
+    description: Test (Razorpay Test Mode)
+  - url: https://api.aegispay.com/v1
+    description: Production (future, gated)
+
+security:
+  - userToken: []
+  - apiKey: []
+  - agentKey: []
+
+tags:
+  - name: merchants
+  - name: agents
+  - name: catalog
+  - name: intents
+  - name: carts
+  - name: authorization
+  - name: approvals
+  - name: orders
+  - name: payments
+  - name: webhooks
+  - name: trust
+  - name: growth
+
+paths:
+  /merchants:
+    post:
+      tags: [merchants]
+      summary: Create a merchant
+      description: Onboards a merchant, returns merchant id (public razorpay key id, never secret).
+      security: [{ userToken: [] }, { apiKey: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MerchantCreate" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Merchant" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+
+  /agents:
+    post:
+      tags: [agents]
+      summary: Register an agent
+      description: Creates an agent identity with scopes, allowed tools, policy, and trust level. An agent can never elevate its own scopes/policy.
+      security: [{ userToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AgentCreate" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Agent" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+      x-audit: agent.created
+
+  /agents/{id}/suspend:
+    post:
+      tags: [agents]
+      summary: Suspend an agent
+      security: [{ userToken: [] }]
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Suspended
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Agent" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+      x-audit: agent.suspended
+
+  /catalog/products:
+    get:
+      tags: [catalog]
+      summary: Search / list products (agent-readable catalog)
+      description: Returns the typed, agent-safe catalog (DATA, not instructions).
+      security: [{ userToken: [] }, { apiKey: [] }, { agentKey: [] }]
+      parameters:
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: category
+          in: query
+          schema: { type: string }
+        - name: cursor
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20, maximum: 100 }
+      responses:
+        "200":
+          description: Products
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProductPage" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+    post:
+      tags: [catalog]
+      summary: Import / create product
+      security: [{ userToken: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProductCreate" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Product" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+      x-audit: catalog.product.created
+
+  /intents:
+    post:
+      tags: [intents]
+      summary: Compile an AI agent's output into a structured, hashable intent
+      description: >-
+        This is the ONLY path by which LLM/agent output enters the core. It validates,
+        types, hashes, and tenant-binds the intent. The money path is not reachable here.
+      security: [{ agentKey: [] }, { apiKey: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/IntentCompile" }
+      responses:
+        "201":
+          description: Compiled intent
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Intent" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+      x-audit: commerce.intent.created
+    parameters: []
+
+  /carts:
+    post:
+      tags: [carts]
+      summary: Create a cart (server-authoritative pricing)
+      description: The cart hash and prices are computed server-side. Client price is ignored.
+      security: [{ agentKey: [] }, { apiKey: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CartCreate" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Cart" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+      x-audit: commerce.cart.created
+
+  /carts/{id}/items:
+    post:
+      tags: [carts]
+      summary: Add an item to a cart
+      description: Price is server-authoritative from the catalog. Ignored if client-sent.
+      security: [{ agentKey: [] }, { apiKey: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CartItemAdd" }
+      responses:
+        "201": { $ref: "#/components/responses/CartResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+      x-audit: commerce.cart.updated
+
+  /carts/{id}/checkout:
+    post:
+      tags: [carts]
+      summary: Lock a cart and prepare checkout
+      description: Freezes the cart hash. Any later material change invalidates authorization.
+      security: [{ agentKey: [] }, { apiKey: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200": { $ref: "#/components/responses/CheckoutResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+      x-audit: commerce.cart.locked
+
+  /authorization/requests:
+    post:
+      tags: [authorization]
+      summary: Request authorization for a cart + intent
+      description: >-
+        Evaluates policy + risk and returns ALLOW (with authorization_hash) /
+        APPROVAL_REQUIRED / DENIED. No money moves here.
+      security: [{ agentKey: [] }, { apiKey: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AuthorizationRequest" }
+      responses:
+        "200":
+          description: Decision
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthorizationResult" }
+        "200-with-approval":
+          description: Human approval required
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApprovalRequired" }
+        "403": { $ref: "#/components/responses/PolicyDenied" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+      x-audit: authorization.requested
+
+  /approvals/{id}/approve:
+    post:
+      tags: [approvals]
+      summary: Approve a human-in-the-loop request
+      description: Scoped, expiring, single-use, non-replayable.
+      security: [{ userToken: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200":
+          description: Approved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApprovalDecisionResult" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+      x-audit: approval.approved
+
+  /approvals/{id}/reject:
+    post:
+      tags: [approvals]
+      summary: Reject a human-in-the-loop request
+      security: [{ userToken: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200":
+          description: Rejected
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApprovalDecisionResult" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+      x-audit: approval.rejected
+
+  /orders:
+    post:
+      tags: [orders]
+      summary: Create an order from a locked cart + bound intent
+      security: [{ agentKey: [] }, { apiKey: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/OrderCreate" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Order" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/PolicyDenied" }
+      x-audit: commerce.order.created
+      x-idempotent: true
+
+  /orders/{id}:
+    get:
+      tags: [orders]
+      summary: Get an order
+      security: [{ userToken: [] }, { apiKey: [] }, { agentKey: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200":
+          description: Order
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Order" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /payments:
+    post:
+      tags: [payments]
+      summary: Initiate a payment
+      description: >-
+        Requires a valid, unexpired authorization_hash. A provider timeout yields
+        UNKNOWN (never a blind retry). Duplicate Idempotency-Key returns the prior result.
+      security: [{ agentKey: [] }, { apiKey: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PaymentInitiate" }
+      responses:
+        "201":
+          description: Initiated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Payment" }
+        "201-unknown":
+          description: Provider outcome unknown → reconciliation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PaymentUnknown" }
+        "403": { $ref: "#/components/responses/PolicyDenied" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "502": { $ref: "#/components/responses/ProviderError" }
+        "504": { $ref: "#/components/responses/ProviderTimeout" }
+      x-audit: payment.initiated
+      x-idempotent: true
+
+  /payments/{id}:
+    get:
+      tags: [payments]
+      summary: Get a payment's authoritative state
+      description: Never trusts frontend. State derives from webhooks/reconciliation.
+      security: [{ userToken: [] }, { apiKey: [] }, { agentKey: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200":
+          description: Payment
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Payment" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /payments/{id}/refund:
+    post:
+      tags: [payments]
+      summary: Refund (idempotent, amount-capped to captured)
+      security: [{ userToken: [] }, { apiKey: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RefundCreate" }
+      responses:
+        "201":
+          description: Refund
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Refund" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+      x-audit: refund.created
+      x-idempotent: true
+
+  /webhooks/razorpay:
+    post:
+      tags: [webhooks]
+      summary: Ingest a Razorpay webhook
+      description: >-
+        Untrusted until signature-verified (HMAC) + timestamp-validated + deduped.
+        Acknowledges idempotently; never a source of arbitrary state jumps.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RazorpayWebhook" }
+      responses:
+        "200":
+          description: Ack
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  received: { type: boolean, example: true }
+                  status: { type: string, enum: [received, verified, deduped], example: verified }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+      x-audit: webhook.received
+
+  /transactions/{id}/passport:
+    get:
+      tags: [trust]
+      summary: Get the Transaction Passport
+      description: Signed provenance bundle + verified audit chain.
+      security: [{ userToken: [] }, { apiKey: [] }, { agentKey: [] }]
+      parameters: [{ $ref: "#/components/parameters/Id" }]
+      responses:
+        "200":
+          description: Passport
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TransactionPassport" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /audit/events:
+    get:
+      tags: [trust]
+      summary: Query the audit trail (tenant-scoped)
+      security: [{ userToken: [] }, { apiKey: [] }]
+      parameters:
+        - name: correlation_id
+          in: query
+          schema: { type: string }
+        - name: event_type
+          in: query
+          schema: { type: string }
+        - name: cursor
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Events
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/AuditEvent" }
+                  next_cursor: { type: string, nullable: true }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /growth/opportunities:
+    post:
+      tags: [growth]
+      summary: Discover revenue opportunities (affinity)
+      description: Growth agent output. Proposals only; every financial effect passes policy/risk/approval.
+      security: [{ agentKey: [] }, { apiKey: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                anchor_product: { type: string }
+                window_days: { type: integer, default: 90 }
+      responses:
+        "200":
+          description: Opportunities
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Opportunity" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+      x-audit: growth.opportunity.discovered
+
+  /campaigns:
+    post:
+      tags: [growth]
+      summary: Create a campaign
+      description: Budget/margin/discount capped by determinisitic policy; requires approval unless autonomy allows.
+      security: [{ userToken: [] }, { apiKey: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CampaignCreate" }
+      responses:
+        "201": { $ref: "#/components/responses/CampaignResponse" }
+        "403": { $ref: "#/components/responses/PolicyDenied" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+      x-audit: campaign.created
+
+components:
+  securitySchemes:
+    userToken:
+      type: http
+      scheme: bearer
+      bearerFormat: OIDC JWT
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-Api-Key
+    agentKey:
+      type: apiKey
+      in: header
+      name: X-Agent-Key
+
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+
+  responses:
+    BadRequest:
+      description: Validation failed
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Forbidden:
+      description: Not authorized
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Not found
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    PolicyDenied:
+      description: Denied by policy
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    ValidationError:
+      description: Unprocessable / validation
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Conflict:
+      description: Conflict (idempotency key reused, state conflict)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    RateLimited:
+      description: Rate limited
+      headers:
+        Retry-After: { schema: { type: integer } }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    ProviderError:
+      description: Provider error
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    ProviderTimeout:
+      description: Provider timeout → UNKNOWN (reconcile later)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    CartResponse:
+      description: Cart
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Cart" }
+    CheckoutResponse:
+      description: Checkout prepared
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              cart_id: { type: string }
+              cart_hash: { type: string }
+              order_id: { type: string }
+              status: { type: string, enum: [CHECKOUT_READY] }
+    CampaignResponse:
+      description: Campaign
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Campaign" }
+
+  schemas:
+    Error:
+      type: object
+      required: [code, message, request_id]
+      properties:
+        code: { type: string, example: POLICY_DENIED }
+        message: { type: string, example: Amount exceeds transaction limit. }
+        request_id: { type: string, example: req_01J… }
+        retryable: { type: boolean, example: false }
+        correlation_id: { type: string, nullable: true }
+
+    MerchantCreate:
+      type: object
+      required: [name, slug]
+      properties:
+        name: { type: string }
+        slug: { type: string }
+        business_type: { type: string }
+        country: { type: string, example: IN }
+        currency: { type: string, example: INR }
+        default_autonomy_level: { $ref: "#/components/schemas/AutonomyLevel" }
+    Merchant:
+      type: object
+      properties:
+        merchant_id: { type: string }
+        name: { type: string }
+        slug: { type: string }
+        currency: { type: string }
+        razorpay_key_id: { type: string }
+        autonomy_level: { $ref: "#/components/schemas/AutonomyLevel" }
+        status: { type: string }
+    AutonomyLevel:
+      type: string
+      enum: [L0, L1, L2, L3, L4]
+
+    AgentCreate:
+      type: object
+      required: [agent_key, agent_type, scopes, allowed_tools, trust_level]
+      properties:
+        agent_key: { type: string }
+        owner_user_id: { type: string }
+        agent_type: { type: string, enum: [AI_BUYER, GROWTH, STOREFRONT] }
+        version: { type: string }
+        scopes:
+          type: array
+          items: { type: string, enum: [discover, recommend, cart, checkout, request_authorization, campaign] }
+        allowed_tools:
+          type: array
+          items: { type: string }
+        policy: { type: string }
+        trust_level: { type: string, enum: [HIGH, MEDIUM, LOW] }
+        expires_at: { type: string, format: date-time }
+    Agent:
+      type: object
+      properties:
+        id: { type: string }
+        agent_type: { type: string }
+        status: { type: string, enum: [ACTIVE, SUSPENDED, REVOKED, EXPIRED] }
+        scopes: { type: array, items: { type: string } }
+        allowed_tools: { type: array, items: { type: string } }
+        expires_at: { type: string, format: date-time, nullable: true }
+
+    ProductCreate:
+      type: object
+      required: [catalog_id, sku, name, category, price_minor, currency]
+      properties:
+        catalog_id: { type: string }
+        sku: { type: string }
+        name: { type: string }
+        category: { type: string }
+        description: { type: string, x-note: treated as untrusted DATA, never instructions }
+        price_minor: { type: integer, description: minor units, example: 349900 }
+        currency: { type: string, example: INR }
+        attributes: { type: object, additionalProperties: true }
+    Product:
+      type: object
+      properties:
+        id: { type: string }
+        sku: { type: string }
+        name: { type: string }
+        category: { type: string }
+        price_minor: { type: integer }
+        currency: { type: string }
+        availability:
+          type: object
+          properties:
+            in_stock: { type: boolean }
+        agent_safe_summary: { type: string }
+    ProductPage:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/Product" }
+        next_cursor: { type: string, nullable: true }
+
+    IntentCompile:
+      type: object
+      required: [agent_id, kind, items, summary]
+      properties:
+        agent_id: { type: string }
+        kind: { type: string }
+        summary: { type: string }
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              product_id: { type: string }
+              quantity: { type: integer, minimum: 1 }
+    Intent:
+      type: object
+      properties:
+        intent_id: { type: string }
+        intent_hash: { type: string }
+        status: { type: string, enum: [CREATED, VALIDATED, AUTHORIZED] }
+        items:
+          type: array
+          items: { type: object }
+
+    CartCreate:
+      type: object
+      required: [customer_id, agent_id]
+      properties:
+        customer_id: { type: string }
+        agent_id: { type: string }
+    Cart:
+      type: object
+      properties:
+        cart_id: { type: string }
+        cart_hash: { type: string }
+        status: { type: string, enum: [CREATED, MODIFIED, LOCKED, CHECKOUT_READY] }
+        currency: { type: string }
+        total_minor: { type: integer }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/CartItem" }
+    CartItemAdd:
+      type: object
+      required: [product_id, quantity]
+      properties:
+        product_id: { type: string }
+        quantity: { type: integer, minimum: 1 }
+        unit_price_minor: { type: integer, x-note: ignored; server-authoritative }
+    CartItem:
+      type: object
+      properties:
+        product_id: { type: string }
+        quantity: { type: integer }
+        unit_price_minor: { type: integer }
+        line_total_minor: { type: integer }
+
+    AuthorizationRequest:
+      type: object
+      required: [cart_id, intent_id]
+      properties:
+        cart_id: { type: string }
+        intent_id: { type: string }
+    AuthorizationResult:
+      type: object
+      properties:
+        status: { type: string, enum: [ALLOWED] }
+        authorization_hash: { type: string }
+        expires_at: { type: string, format: date-time }
+        policy_version: { type: string }
+        risk_level: { type: string }
+    ApprovalRequired:
+      type: object
+      properties:
+        status: { type: string, enum: [APPROVAL_REQUIRED] }
+        approval_request_id: { type: string }
+        reason: { type: string }
+
+    OrderCreate:
+      type: object
+      required: [cart_id, intent_id, authorization_hash]
+      properties:
+        cart_id: { type: string }
+        intent_id: { type: string }
+        authorization_hash: { type: string }
+    OrderStatus:
+      type: string
+      enum: [CREATED, AUTHORIZATION_PENDING, APPROVED, REJECTED, PAYMENT_PENDING, PAID, FAILED, CANCELLED, REFUND_PENDING, REFUNDED, COMPLETED]
+    Order:
+      type: object
+      properties:
+        order_id: { type: string }
+        status: { $ref: "#/components/schemas/OrderStatus" }
+        total_minor: { type: integer }
+        currency: { type: string }
+        policy_version: { type: string }
+        risk_score: { type: integer }
+
+    PaymentInitiate:
+      type: object
+      required: [order_id, authorization_hash, method]
+      properties:
+        order_id: { type: string }
+        authorization_hash: { type: string }
+        method: { type: string, enum: [card, upi, netbanking] }
+    PaymentStatus:
+      type: string
+      enum: [CREATED, AUTHORIZATION_PENDING, CAPTURE_PENDING, CAPTURED, FAILED, UNKNOWN]
+    Payment:
+      type: object
+      properties:
+        payment_id: { type: string }
+        order_id: { type: string }
+        status: { $ref: "#/components/schemas/PaymentStatus" }
+        amount_minor: { type: integer }
+        provider: { type: string }
+        provider_order_id: { type: string, nullable: true }
+        provider_payment_id: { type: string, nullable: true }
+        idempotency_key: { type: string }
+    PaymentUnknown:
+      allOf:
+        - $ref: "#/components/schemas/Payment"
+        - type: object
+          properties:
+            status: { type: string, enum: [UNKNOWN] }
+            reconciliation_scheduled: { type: boolean, example: true }
+
+    RefundCreate:
+      type: object
+      required: [amount_minor, reason]
+      properties:
+        amount_minor: { type: integer, description: must be <= captured refundable }
+        reason: { type: string }
+    Refund:
+      type: object
+      properties:
+        id: { type: string }
+        payment_id: { type: string }
+        amount_minor: { type: integer }
+        status: { type: string, enum: [PENDING, PROCESSED, COMPLETED, FAILED] }
+        provider_refund_id: { type: string }
+
+    RazorpayWebhook:
+      type: object
+      required: [event_id, event, payload]
+      properties:
+        event_id: { type: string }
+        event: { type: string }
+        payload:
+          type: object
+          additionalProperties: true
+      x-auth: authenticated via Razorpay webhook HMAC (not OpenAPI security)
+
+    TransactionPassport:
+      type: object
+      properties:
+        transaction_id: { type: string }
+        agent_id: { type: string }
+        merchant_id: { type: string }
+        user_id: { type: string }
+        intent_hash: { type: string }
+        cart_hash: { type: string }
+        authorization_hash: { type: string }
+        policy_version: { type: string }
+        risk_score: { type: integer }
+        risk_level: { type: string }
+        protocol: { type: string }
+        authorization_method: { type: string }
+        human_presence: { type: boolean }
+        human_approval: { type: string, enum: [REQUIRED, NOT_REQUIRED, APPROVED, REJECTED] }
+        spending_limit_minor: { type: integer }
+        decision: { type: string }
+        provider: { type: string }
+        provider_order_id: { type: string }
+        provider_payment_id: { type: string }
+        timestamp: { type: string, format: date-time }
+        previous_event_hash: { type: string }
+        current_event_hash: { type: string }
+        audit_integrity: { type: string, enum: [VERIFIED, FAILED] }
+
+    AuditEvent:
+      type: object
+      properties:
+        event_id: { type: string }
+        event_type: { type: string }
+        schema_version: { type: string }
+        timestamp: { type: string, format: date-time }
+        actor: { type: string }
+        actor_type: { type: string }
+        correlation_id: { type: string }
+        causation_id: { type: string, nullable: true }
+        payload: { type: object, additionalProperties: true }
+        event_hash: { type: string }
+
+    Opportunity:
+      type: object
+      properties:
+        opportunity_id: { type: string }
+        kind: { type: string, enum: [cross_sell, upsell, bundle, campaign] }
+        anchor_product: { type: string }
+        target_products: { type: array, items: { type: string } }
+        affinity: { type: number }
+        estimated_uplift:
+          type: object
+          properties:
+            low: { type: number }
+            mid: { type: number }
+            high: { type: number }
+        recommended_action: { type: object, additionalProperties: true }
+        reason: { type: string }
+        estimates_are: { type: boolean, example: true }
+        model_version: { type: string }
+
+    CampaignCreate:
+      type: object
+      required: [agent_id, name, budget_minor]
+      properties:
+        agent_id: { type: string }
+        name: { type: string }
+        budget_minor: { type: integer }
+        max_discount_pct: { type: number, example: 10 }
+        min_margin_pct: { type: number, example: 18 }
+        max_duration_days: { type: integer, example: 30 }
+        targeting: { type: object, additionalProperties: true }
+        discount_policy_ref: { type: string }
+    Campaign:
+      type: object
+      properties:
+        id: { type: string }
+        status: { type: string, enum: [DRAFT, PROPOSED, PENDING_APPROVAL, APPROVED, ACTIVE, PAUSED, COMPLETED, REJECTED] }
+        budget_minor: { type: integer }
+        spent_minor: { type: integer }
+        risk_score: { type: integer }
+        policy_version: { type: string }
