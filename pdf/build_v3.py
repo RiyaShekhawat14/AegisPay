@@ -21,8 +21,9 @@ flowchart TB
   AI["AI / AGENT LAYER - proposes only"]
   AI --> IA[SELL Agent]
   AI --> IB[GROW Agent]
-  IA --> INT["Structured Intent"]
-  IB --> INT
+  IA --> GW["Protocol Gateway<br/>- single entry -"]
+  IB --> GW
+  GW --> INT["Canonical AegisPay Intent"]
   INT --> ORCH
   subgraph CP["AEGISPAY CONTROL PLANE - deterministic and trusted"]
     direction TB
@@ -71,6 +72,27 @@ flowchart LR
   B --> RD[(Redis)]
   B --> SQ[(SQS)]
   B --> RZ[Razorpay]
+""",
+"p_gateway": r"""
+flowchart LR
+  A2A["A2A"] & MCP["MCP"] & UCP["UCP"] & ACP["ACP"] & AP2["AP2"] & X4["x402"] & A2UI["A2UI"] & UPI["UPI / UAP"] --> G["Protocol Gateway"]
+  G --> N["Canonical Intent"]
+  N --> C["AegisPay Control Plane"]
+  C --> P["Policy"] --> R["Risk"] --> AU["Authorize"] --> PAY["Payment"]
+  PAY --> PROV["Razorpay / UPI / x402"]
+""",
+"p_adapter": r"""
+flowchart LR
+  subgraph EX["External protocol"]
+    P1["A2A task / MCP tool / ACP message / AP2 mandate / x402 pay"]
+  end
+  subgraph AD["Gateway adapter"]
+    A1[Authenticate]
+    A2[Validate schema]
+    A3[Normalize to intent]
+    A4[Scope + allowlist]
+  end
+  EX --> A1 --> A2 --> A3 --> A4 --> CP[AegisPay Control Plane]
 """,
 "a_gate": r"""
 flowchart TD
@@ -259,8 +281,11 @@ def render(text, name):
     mmd = BUILD/(name+".mmd"); png = BUILD/(name+".png")
     mmd.write_text(text.strip(), encoding="utf-8")
     if png.exists(): png.unlink()
+    import json as _json
+    cfg = BUILD/"mermaid.json"
+    _json.dump({"theme":"neutral","themeVariables":{"fontSize":"17px","fontFamily":"Helvetica","lineColor":"#64748B","primaryColor":"#FFFFFF","primaryBorderColor":"#334155","clusterBkg":"#F4F5F7"}}, open(cfg,"w"))
     try:
-        subprocess.run(["node", MMDC, "-q", "-i", str(mmd), "-o", str(png), "-t", "neutral"],
+        subprocess.run(["node", MMDC, "-c", str(cfg), "-q", "-i", str(mmd), "-o", str(png), "-s", "2"],
                        check=True, capture_output=True)
     except subprocess.CalledProcessError as e:
         raise RuntimeError(f"{name}: {e.stderr.decode()[:400]}")
@@ -312,9 +337,9 @@ def table(rows, widths):
         ("LEFTPADDING",(0,0),(-1,-1),4),("RIGHTPADDING",(0,0),(-1,-1),4),
         ("TOPPADDING",(0,0),(-1,-1),3),("BOTTOMPADDING",(0,0),(-1,-1),3)]))
     return t
-def image_flow(path, max_w=176*mm):
+def image_flow(path, max_w=182*mm):
     from PIL import Image as PILImage
-    iw,ih=PILImage.open(path).size; r=ih/float(iw); w=min(max_w,iw/4.0)
+    iw,ih=PILImage.open(path).size; r=ih/float(iw); w=min(max_w,228*mm/r)
     return Image(str(path), width=w, height=w*r)
 def diag(name, cap): return KeepTogether([Spacer(1,3), image_flow(BUILD/(name+".png")), Paragraph(cap,CAP)])
 
@@ -371,6 +396,29 @@ A+=secA(4,"Component architecture")+[table([["Component","What it does","Fails s
   ["Webhook Gateway","Verifies + dedupes provider events","Drops bad/duplicate events"],
   ["Reconciliation","Resolves UNKNOWN from provider truth","Never retries blindly"],
   ["Audit + Passport","Records every decision","Tamper-evident chain"]],[40*mm,70*mm,64*mm])]
+
+A+=[PageBreak()]+secA("4b","The Protocol Gateway &amp; agentic-commerce protocols")+[
+  para("Every external protocol enters through <b>one</b> Protocol Gateway and is normalized into a single canonical AegisPay intent before the control plane. A new protocol is a new adapter — it changes the transport, never the money path.",BODY),
+  diag("p_gateway","Gateway — all protocols collapse into one canonical intent"),
+  diag("p_adapter","Each adapter authenticates, validates, normalizes and scope-checks before the control plane")]
+
+A+=secA("4c","Protocol maturity &amp; security")+[
+  table([["Protocol","Role in AegisPay","Maturity"],
+   ["MCP","controlled agent tools / context","Core"],
+   ["A2A","agent-to-agent communication","Adapter-ready"],
+   ["UCP","commerce interoperability","Adapter-ready"],
+   ["ACP","agentic checkout / commerce","Adapter-ready"],
+   ["AP2","payment mandates &amp; verifiable authorization","Experimental"],
+   ["x402","machine / pay-per-use payments","Experimental"],
+   ["A2UI","agent-driven UI","Experimental"],
+   ["NPCI UAP / UPI","India agentic-payment ecosystem","Future"]],[54*mm,76*mm,44*mm]),
+  para("Maturity is honest: <b>Core</b> is implemented, <b>Adapter-ready</b> has a mapping, <b>Experimental</b> maps only where semantics align, <b>Future</b> is a watch-list with no compliance claim. The core never imports a protocol SDK.",NOTE),
+  table([["Protocol security","How it's handled"],
+   ["Authentication / identity","OAuth per protocol mapped to a canonical agent_id"],
+   ["Schema validation","strict typed schema on the normalized intent; free text never trusted"],
+   ["Replay protection","single-use nonce, expiry, binding to a transaction digest"],
+   ["Scoped authorization + idempotency","one action, one amount, one policy version; key per command"],
+   ["Tool allowlisting + tenant isolation","only safe tools exposed; tenant resolved from auth, RLS at the DB"]],[56*mm,118*mm])]
 
 A+=[PageBreak()]+secA(5,"AI / Control-plane trust boundary")+[diag("a_trust","Figure 2 — The AI thinks; the control plane decides and acts, sharing only a structured intent"),
   para("The AI runtime has <b>no payment keys, no database credentials, no unrestricted money tools and no policy mutation capability</b>. A manipulated agent can therefore only produce an intent that the control plane will deterministically gate.", BODY)]
