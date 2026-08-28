@@ -15,33 +15,43 @@ MMDC = r"C:\Users\hp\AppData\Roaming\npm\node_modules\@mermaid-js\mermaid-cli\sr
 OUT = ROOT/"AegisPay-Database-Schema.pdf"
 
 D = {
-"er": r"""
+"er_a": r"""
 erDiagram
   TENANTS ||--o{ TENANT_USERS : has
   USERS ||--o{ TENANT_USERS : member
   TENANTS ||--o{ AGENTS : owns
   AGENTS ||--o{ AGENT_SESSIONS : opens
+""",
+"er_b": r"""
+erDiagram
   TENANTS ||--o{ PRODUCTS : sells
-  PRODUCTS ||--o{ CARTS : in
+  TENANTS ||--o{ CARTS : owns
   AGENTS ||--o{ CARTS : builds
   CARTS ||--o{ CART_ITEMS : has
+  CART_ITEMS }o--|| PRODUCTS : references
   PRODUCTS ||--o{ INVENTORY_RESERVATIONS : reserved_by
   CARTS ||--o{ INVENTORY_RESERVATIONS : holds
-  CARTS ||--o{ ORDERS : becomes
+  CARTS ||--o| ORDERS : becomes
   ORDERS ||--o{ ORDER_ITEMS : has
-  PRODUCTS ||--o{ ORDER_ITEMS : snapshot
+  ORDER_ITEMS }o--|| PRODUCTS : snapshot
+""",
+"er_c": r"""
+erDiagram
   TENANTS ||--o{ POLICIES : sets
   ORDERS ||--o| AUTHORIZATIONS : uses
   AUTHORIZATIONS ||--o{ APPROVALS : may need
   ORDERS ||--o{ PAYMENTS : paid_by
   PAYMENTS ||--o{ REFUNDS : refunded
   TENANTS ||--o{ WEBHOOK_EVENTS : receives
+""",
+"er_d": r"""
+erDiagram
   AGENTS ||--o{ OPPORTUNITIES : detects
   OPPORTUNITIES ||--o{ CAMPAIGNS : launches
   CAMPAIGNS ||--o{ CAMPAIGN_BUDGET_LEDGER : ledger
   TENANTS ||--o{ IDEMPOTENCY_KEYS : namespaced
   TENANTS ||--o{ OUTBOX_EVENTS : emits
-  TENANTS ||--o{ AUDIT_EVENTS : recorded
+  TENANTS ||--o{ AUDIT_EVENTS : records
 """,
 "sec": r"""
 flowchart LR
@@ -262,9 +272,19 @@ F+=[PageBreak(), para("1. Database overview",H2),
 
 F+=[PageBreak(), para("2. Database architecture",H2),
   para("The data is split into a few small groups. The AI layer can propose (catalog, carts, opportunities), but the financial and audit tables are owned by the control plane and payment services.",BODY),
-  diag("er","Figure 1 — The complete ER diagram. Only table, primary key and relationships are shown."),
-  para("3. Complete ER diagram",H2),
-  para("Every table hangs off a merchant (tenants). The one clean diagram above shows it all at a glance.",NOTE)]
+  table2([["Group","Tables"],["Identity &amp; Tenants","tenants · users · tenant_users · agents · agent_sessions"],
+    ["Commerce","products · carts · cart_items · inventory_reservations · orders · order_items"],
+    ["Control &amp; Safety","policies · authorizations · approvals"],
+    ["Payments","payments · refunds · webhook_events"],
+    ["GROW","opportunities · campaigns · campaign_budget_ledger"],
+    ["Platform Reliability","idempotency_keys · outbox_events · audit_events"]],[40*mm,134*mm])]
+
+F+=[PageBreak(), para("3. Complete ER diagram",H2),
+  para("The database is one shared PostgreSQL database. To keep it readable, the relationships are shown in <b>four clean views</b> instead of one crowded diagram. Each table's own columns are on its card in the next sections.",NOTE),
+  diag("er_a","Figure 1 — Identity &amp; tenants: who owns what"),
+  diag("er_b","Figure 2 — Commerce: products, carts, orders"),
+  diag("er_c","Figure 3 — Control &amp; payments: authorization, payment, refund"),
+  diag("er_d","Figure 4 — Growth &amp; reliability: campaigns, idempotency, outbox, audit")]
 
 groups=[("Identity &amp; Tenants",["tenants","users","tenant_users","agents","agent_sessions"]),
         ("Commerce",["products","carts","cart_items","inventory_reservations","orders","order_items"]),
@@ -287,7 +307,7 @@ F+=[PageBreak(), para("10. Shared database security / RLS",H2),
            "<b>PostgreSQL RLS</b> automatically blocks A from reading B's rows — even on a buggy query.",
            "Tenant context is set server-side per request with <b>SET LOCAL</b>, never taken from the client.",
            "One role migrates/owns the schema; a separate application role only does DML and cannot bypass RLS."]),
-  diag("sec","Figure 2 — Request → authentication → tenant membership → server sets tenant → RLS → database"),
+  diag("sec","Figure 5 — Request → authentication → tenant membership → server sets tenant → RLS → database"),
   para("Frontends can request only what belongs to the authenticated tenant. The database enforces it too.",NOTE)]
 
 F+=[PageBreak(), para("11. State tables",H2),
@@ -298,8 +318,8 @@ F+=[PageBreak(), para("11. State tables",H2),
   para("Cart",H3), table2([["State","Next"],["active","locked"],["locked","expired"],["locked","converted_to_order"]],[70*mm,104*mm]),
   para("If the provider is slow, the payment is <b>unknown</b> — we never retry it blindly. We reconcile (ask the provider), then finish or fail safely.",CALL)]
 
-F+=[PageBreak(), para("12. SELL database flow",H2), diag("sell","Figure 3 — How a purchase moves through the database"),
-  para("13. GROW database flow",H2), diag("grow","Figure 4 — How a campaign starts, spends and is measured")]
+F+=[PageBreak(), para("12. SELL database flow",H2), diag("sell","Figure 6 — How a purchase moves through the database"),
+  para("13. GROW database flow",H2), diag("grow","Figure 7 — How a campaign starts, spends and is measured")]
 
 F+=[PageBreak(), para("14. Audit + Transaction Passport",H2),
   para("There is <b>no</b> passport table. The Transaction Passport is <b>generated</b> from the order, order items, authorization, policy, approval, payment and audit events. The audit trail is append-only and hash-chained — it is <b>tamper-evident</b>, not tamper-proof.",BODY),
