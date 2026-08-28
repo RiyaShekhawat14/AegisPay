@@ -102,7 +102,8 @@ AgeisPay/
 
 | Document | Covers |
 |---|---|
-| `AegisPay-Architecture-V3.pdf` | The full production architecture (outbox, payment state machine, webhook security, idempotency, refunds, atomic budget, A/B, threat model, SLOs, failure testing) |
+| `AegisPay-Agentic-Commerce-Architecture-V4.pdf` | The full production architecture, now protocol-aware (single Protocol Gateway → adapters → normalized intent → control plane) |
+| `AegisPay-Architecture-V3.pdf` | The production architecture (outbox, payment state machine, webhook security, idempotency, refunds, atomic budget, A/B, threat model, SLOs, failure testing) |
 | `AegisPay-LangGraph-GROW-V3.pdf` | The merchant revenue agent flow |
 | `AegisPay-LangGraph-SELL-V3.pdf` | The AI-buyer checkout flow |
 | `AegisPay-Frontend-GROW.pdf` | The merchant console UI |
