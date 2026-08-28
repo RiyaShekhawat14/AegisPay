@@ -13,6 +13,7 @@ aegispay/
 ├── .github/workflows/        # ci.yml (compile backend, validate OpenAPI/docs) — GitHub-hosted, no AWS needed
 ├── api/openapi.yaml          # OpenAPI 3.1 contract (shared by backend + web)
 ├── docs/                     # the engineering documentation set (00…54 + ADRs)
+│   └── pdf/                  # the final published documents (architecture, GROW/SELL, frontend, schema)
 ├── pdf/                      # diagram/PDF generators + frontend mockup sources
 │
 ├── backend/                  # ⟵ ALL SERVER CODE (single service, two deploy units)

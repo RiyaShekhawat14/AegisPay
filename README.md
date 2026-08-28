@@ -110,13 +110,13 @@ Run it locally with `docker compose up` (Postgres 16 + Redis + Localstack SQS + 
 
 | Document | Covers |
 |---|---|
-| `AegisPay-Agentic-Commerce-Architecture-V4.pdf` | The full production architecture, now protocol-aware (single Protocol Gateway → adapters → normalized intent → control plane) |
-| `AegisPay-Architecture-V3.pdf` | The production architecture, now protocol-aware (Protocol Gateway, maturity tiers, protocol security) + outbox, payment state machine, webhook security, idempotency, refunds, atomic budget, A/B, threat model, SLOs, failure testing |
-| `AegisPay-LangGraph-GROW-V3.pdf` | The merchant revenue agent flow |
-| `AegisPay-LangGraph-SELL-V3.pdf` | The AI-buyer checkout flow |
-| `AegisPay-Frontend-GROW.pdf` | The merchant console UI |
-| `AegisPay-Frontend-SELL.pdf` | The AI-buyer checkout UI |
-| `AegisPay-Database-Schema.pdf` | The simple, secure, multi-tenant PostgreSQL schema |
+| `docs/pdf/AegisPay-Agentic-Commerce-Architecture-V4.pdf` | The full production architecture, now protocol-aware (single Protocol Gateway → adapters → normalized intent → control plane) |
+| `docs/pdf/AegisPay-Architecture-V3.pdf` | The production architecture, now protocol-aware (Protocol Gateway, maturity tiers, protocol security) + outbox, payment state machine, webhook security, idempotency, refunds, atomic budget, A/B, threat model, SLOs, failure testing |
+| `docs/pdf/AegisPay-LangGraph-GROW-V3.pdf` | The merchant revenue agent flow |
+| `docs/pdf/AegisPay-LangGraph-SELL-V3.pdf` | The AI-buyer checkout flow |
+| `docs/pdf/AegisPay-Frontend-GROW.pdf` | The merchant console UI |
+| `docs/pdf/AegisPay-Frontend-SELL.pdf` | The AI-buyer checkout UI |
+| `docs/pdf/AegisPay-Database-Schema.pdf` | The simple, secure, multi-tenant PostgreSQL schema |
 
 ---
 
