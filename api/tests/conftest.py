@@ -4,6 +4,7 @@ conftest lives at <repo>/api/tests/, so parents[1] = <repo>/api and parents[2] =
 (the import root for the `api` package). Added at import time so pytest can collect tests
 that do `from api.… ` regardless of working directory.
 """
+
 import sys
 from pathlib import Path
 
