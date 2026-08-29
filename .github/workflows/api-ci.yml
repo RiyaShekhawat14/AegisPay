@@ -1,0 +1,59 @@
+name: API CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: api-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Required status check on main (branch protection context: "test").
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install backend deps + dev tools
+        run: python -m pip install -e "api[dev]" pip-audit
+
+      - name: Lint (ruff)
+        run: ruff check api
+
+      - name: Format check (ruff)
+        run: ruff format --check api
+
+      - name: Type check (mypy) on domain modules
+        run: mypy --config-file api/pyproject.toml
+
+      - name: Unit tests (payment safety, policy, gateway, auth, idempotency, carts, budget, refunds)
+        working-directory: api
+        run: pytest -q tests/unit
+
+      - name: Compile backend
+        run: find api/ai_runtime api/modules api/core api/routers api/dependencies api/middleware api/schemas api/policy api/tests -name '*.py' -print0 | xargs -0 -n1 python -m py_compile
+
+      - name: Validate OpenAPI YAML
+        run: python -c "import glob,yaml; fs=glob.glob('docs/openapi/*.yaml'); assert fs; [yaml.safe_load(open(f)) for f in fs]; print('OpenAPI OK:', fs)"
+
+      - name: Docs present
+        run: |
+          test -f README.md
+          test -f docs/00-architecture-master.md
+          test -d docs/03-architecture-decision-records
+
+      - name: Secret detection (gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Dependency scan (pip-audit)
+        continue-on-error: true
+        run: pip-audit

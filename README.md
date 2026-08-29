@@ -82,29 +82,29 @@ output, checkpointing).
 
 ```
 aegispay/
-├── README.md                       ← you are here
-├── CONTRIBUTING.md                 ← how to change and regenerate docs
-├── .github/workflows/              ← CI (compile backend, validate OpenAPI/docs, run on PR)
-├── api/
-│   └── openapi.yaml                ← OpenAPI 3.1 contract
-├── docs/                           ← engineering documentation set
-│   ├── 00-architecture-master.md   ← the master architecture doc
-│   ├── 00b-grow-sell-protect.md    ← product model
-│   ├── 01-product-requirements.md  →  54-success-metrics.md
-│   └── 03-architecture-decision-records/  ← ADR-001 … ADR-018
-├── pdf/                            ← diagram/PDF generators + frontend mockup sources
-├── backend/                        ← all server code (Go-free: Python/FastAPI)
-│   ├── pyproject.toml · .env.example · compose.yaml · Makefile
-│   ├── Dockerfile · Dockerfile.ai   ← control plane + isolated AI runtime images
-│   ├── app/                         ← CONTROL PLANE (FastAPI): api, core, modules, workers
-│   ├── ai_runtime/                  ← ISOLATED AI RUNTIME (no DB, no secrets, no money tools)
-│   ├── migrations/0001_init.sql     ← v1 schema + RLS + indexes
-│   └── tests/                       ← unit, integration, e2e, redteam
-└── web/                            ← merchant console + AI buyer (Next.js + TS + Tailwind)
-    └── src/ (app, components, lib, types)
+├── README.md · STRUCTURE.md · CONTRIBUTING.md · .env.example · Makefile
+├── .github/workflows/            ← api-ci (required), web-ci, integration
+├── api/                          ← backend: FastAPI + LangGraph (control plane + AI runtime)
+│   ├── main.py · pyproject.toml · Dockerfile · Dockerfile.ai · db/
+│   ├── config/ core/ middleware/ dependencies/ routers/ schemas/
+│   ├── policy/ graph/ services/ repositories/ websockets/
+│   ├── modules/                  ← implemented domain (commerce, payments, gateway, …)
+│   ├── ai_runtime/               ← isolated AI runtime (no DB, no secrets, no money tools)
+│   └── tests/                    ← unit, integration, fixtures
+├── frontend/                     ← merchant console + AI buyer (Next.js + TS + Tailwind)
+├── workers/                      ← background jobs (webhooks, reconciliation, outbox relay)
+├── db/                           ← migrations/0001_initial.sql + seeds/
+├── deploy/                       ← compose/ + docker/nginx.conf
+├── tests/e2e/                    ← Playwright checkout-flow
+├── scripts/                      ← dev bootstrap, ci, generators
+├── docs/                         ← canonical docs (PRD, ARCHITECTURE, API_SPEC, …)
+│   ├── 00…54-*.md · 03-architecture-decision-records/ · pdf/ · openapi/
+└── pdf/                          ← diagram/PDF generators + mockup sources
 ```
 
-Run it locally with `docker compose up` (Postgres 16 + Redis + Localstack SQS + both services). A production `docs/21-infrastructure.md` describes an AWS deployment (CloudFront → ALB → ECS, RDS, Redis, SQS, Secrets Manager) to add when an AWS account is available.
+Run locally with `docker compose -f deploy/compose/docker-compose.yml up` (Postgres 16 +
+Redis + Localstack SQS + services). A production `docs/21-infrastructure.md` describes the
+AWS deployment to add when an AWS account is available.
 
 ### Final documents
 
@@ -169,11 +169,16 @@ Run it locally with `docker compose up` (Postgres 16 + Redis + Localstack SQS + 
 ## Status
 
 `DESIGN -> SKELETON` — the architecture is documented and a **production-oriented skeleton**
-now exists: `backend/` (FastAPI control plane + isolated AI runtime + migrations + tests)
-and `web/` (Next.js frontend). The deterministic safety logic is implemented and unit-tested
+now exists: `api/` (FastAPI control plane + isolated AI runtime)
+and `frontend/` (Next.js). The deterministic safety logic is implemented and unit-tested
 (payment state machine, policy engine, protocol gateway, idempotency, cart/price/inventory
 guards, atomic campaign budget, refund guard, hash-chained audit), and the full unit suite passes.
 
-**Honesty note:** provider HTTP calls (Razorpay), live protocol transport, and DB/Redis/SQS
-wiring are still to be completed; they are adapter-ready where they exist and are **not**
-claimed as done. See `docs/40-engineering-roadmap.md` for the build sequence.
+Implemented and unit-tested now: real authentication (JWT HS256 + API key → tenant + RBAC),
+token-bucket rate limiting, and the **purchase execution flow** — idempotent payment
+initiation, provider-timeout → `UNKNOWN`, deduped + signature-verified webhooks, and
+reconciliation to `PAID` (see `tests/unit/test_{jwt,ratelimit,purchase_flow}.py`).
+
+**Honesty note:** DB-backed repositories (SQLAlchemy), live Razorpay/UPI HTTP, SQS/Redis
+wiring, and observability are still to be completed; they are adapter-ready where they
+exist and are **not** claimed as done. See `docs/40-engineering-roadmap.md`.

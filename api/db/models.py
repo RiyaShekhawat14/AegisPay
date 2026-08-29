@@ -1,0 +1,62 @@
+"""Async SQLAlchemy models for the core money aggregates (schema mirrors 0001_initial.sql)."""
+
+from __future__ import annotations
+
+import uuid
+from datetime import datetime
+
+from sqlalchemy import BigInteger, DateTime, ForeignKey, String, func
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+class TimestampMixin:
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+
+class TenantMixin:
+    tenant_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+
+
+class Order(Base, TimestampMixin, TenantMixin):
+    __tablename__ = "orders"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    cart_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("carts.id"))
+    agent_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("agents.id"))
+    currency: Mapped[str] = mapped_column(String(3), default="INR")
+    total_minor: Mapped[int] = mapped_column(BigInteger)
+    status: Mapped[str] = mapped_column(String(32), default="CREATED")
+    policy_version: Mapped[str] = mapped_column(String(32))
+    idempotency_key: Mapped[str] = mapped_column(String(128), unique=True)
+
+
+class Payment(Base, TimestampMixin, TenantMixin):
+    __tablename__ = "payments"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    order_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("orders.id"))
+    amount_minor: Mapped[int] = mapped_column(BigInteger)
+    currency: Mapped[str] = mapped_column(String(3), default="INR")
+    provider: Mapped[str] = mapped_column(String(32))
+    provider_order_id: Mapped[str | None] = mapped_column(String(128))
+    provider_payment_id: Mapped[str | None] = mapped_column(String(128))
+    status: Mapped[str] = mapped_column(String(32), default="CREATED")
+    idempotency_key: Mapped[str] = mapped_column(String(128), unique=True)
+    unknown_since: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class Campaign(Base, TimestampMixin, TenantMixin):
+    __tablename__ = "campaigns"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(128))
+    status: Mapped[str] = mapped_column(String(32), default="DRAFT")
+    budget_minor: Mapped[int] = mapped_column(BigInteger)
+    spent_minor: Mapped[int] = mapped_column(BigInteger, default=0)
+    discount_pct: Mapped[float | None]
+    min_margin_pct: Mapped[float | None]

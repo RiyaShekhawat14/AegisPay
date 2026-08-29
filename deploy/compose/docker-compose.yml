@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: aegispay_migration
+      POSTGRES_PASSWORD: aegispay
+      POSTGRES_DB: aegispay
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../../api/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+  db_migrate:
+    image: postgres:16
+    command: ["psql", "-h", "db", "-U", "aegispay_migration", "-d", "aegispay", "-f", "/migrations/0001_initial.sql"]
+    volumes: ["../../db/migrations:/migrations:ro"]
+    depends_on: ["db"]
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+
+  localstack:
+    image: localstack/localstack:latest
+    environment:
+      SERVICES: sqs
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+    ports: ["4566:4566"]
+
+  app:
+    build:
+      context: ../../api
+      dockerfile: Dockerfile
+    environment:
+      APP_ENV: local
+      DATABASE_URL: postgresql+asyncpg://aegispay_app:aegispay@db:5432/aegispay
+      REDIS_URL: redis://redis:6379/0
+      SQS_URL: http://localstack:4566/000000000000/aegispay
+    depends_on: ["db_migrate", "redis", "localstack"]
+    ports: ["8000:8000"]
+
+  ai_runtime:
+    build:
+      context: ../../api
+      dockerfile: Dockerfile.ai
+    depends_on: ["app"]
+    ports: ["8001:8000"]
+
+volumes:
+  pgdata:
