@@ -9,19 +9,29 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ../../api/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aegispay_migration -d aegispay"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
 
   db_migrate:
     image: postgres:16
-    command: ["psql", "-h", "db", "-U", "aegispay_migration", "-d", "aegispay", "-f", "/migrations/0001_initial.sql"]
+    environment:
+      PGPASSWORD: aegispay
+    command: ["psql", "-v", "ON_ERROR_STOP=1", "-h", "db", "-U", "aegispay_migration", "-d", "aegispay", "-f", "/migrations/0001_initial.sql"]
     volumes: ["../../db/migrations:/migrations:ro"]
-    depends_on: ["db"]
+    depends_on:
+      db:
+        condition: service_healthy
 
   redis:
     image: redis:7-alpine
     ports: ["6379:6379"]
 
   localstack:
-    image: localstack/localstack:latest
+    image: localstack/localstack:3.5.0
     environment:
       SERVICES: sqs
       AWS_ACCESS_KEY_ID: test
@@ -30,8 +40,8 @@ services:
 
   app:
     build:
-      context: ../../api
-      dockerfile: Dockerfile
+      context: ../..
+      dockerfile: api/Dockerfile
     environment:
       APP_ENV: local
       DATABASE_URL: postgresql+asyncpg://aegispay_app:aegispay@db:5432/aegispay
@@ -42,8 +52,8 @@ services:
 
   ai_runtime:
     build:
-      context: ../../api
-      dockerfile: Dockerfile.ai
+      context: ../..
+      dockerfile: api/Dockerfile.ai
     depends_on: ["app"]
     ports: ["8001:8000"]
 

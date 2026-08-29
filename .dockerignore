@@ -1,0 +1,44 @@
+# Build context is the repo root; only the `api` package is copied into the image.
+# Exclude everything unrelated so the context is small and no secrets are baked in.
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+
+# node / web (never needed by the API image)
+node_modules/
+.next/
+out/
+frontend/
+
+# other services / docs not needed at runtime
+workers/
+pdf/
+docs/
+db/
+scripts/
+deploy/
+tests/
+STRUCTURE.md
+README.md
+
+# env (never bake secrets; keep only examples if referenced)
+.env
+.env.*
+
+# vcs / os / editor
+.git/
+.gitignore
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
