@@ -54,6 +54,16 @@
 - **Problem:** CI ka **bare** Postgres service `db/init.sql` nahi chalata (wo sirf local compose entrypoint mein hota hai), isliye `aegispay_app` role banti hi nahi → migration ke grants + tests connect fail.
 - **Fix:** Integration workflow mein migration se pehle `psql -f api/db/init.sql` chalao (role create + grants).
 
+## 11. Auth: valid `member` token par `/v1/me` → 403
+- **Error:** E2E test — authenticated member ko `/v1/me` 403 `insufficient role`.
+- **Problem:** Endpoint `has_permission(principal.role, "member")` check kar raha tha, lekin `"member"` ek **role** hai, permission nahi. Member role ke paas `catalog.read` hai, `member` nahi → hamesha deny. Koi bhi authenticated user apni identity dekh sakta hai, is check ki zaroorat hi nahi.
+- **Fix:** `/v1/me` se galt permission gate hataya (auth hi kaafi hai); RBAC gating domain routers hota hai.
+
+## 12. Auth: bad JWT signature → 500 (should be 401)
+- **Error:** E2E test — invalid/expired token par `/v1/me` `500 INTERNAL_ERROR`.
+- **Problem:** `resolve_principal` mein `verify_jwt` **ValueError** raise karta hai (bad signature/expired), par wo catch nahi tha → generic 500 handler tak pahunch jaata tha.
+- **Fix:** `resolve_principal` mein `ValueError` catch karke `HTTPException(401, "invalid token")` raise karo — bad/expired token ab 401 deta hai.
+
 ---
 
 ## Naya error yahan add karo (template)

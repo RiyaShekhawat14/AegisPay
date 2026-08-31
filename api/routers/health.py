@@ -2,8 +2,6 @@
 
 from fastapi import APIRouter
 
-from api.core.authorization import has_permission
-from api.core.exceptions import AuthorizationError
 from api.dependencies.auth import CurrentPrincipal
 from api.schemas.common import PrincipalOut
 
@@ -22,8 +20,8 @@ async def readyz() -> dict[str, str]:
 
 @router.get("/me", response_model=PrincipalOut)
 async def me(principal: CurrentPrincipal) -> PrincipalOut:
-    if not has_permission(principal.role, "member"):
-        raise AuthorizationError("insufficient role")
+    # Any authenticated principal may view its own identity; RBAC gating lives in
+    # the domain routers (see require_roles / has_permission).
     return PrincipalOut(
         subject=principal.subject,
         principal_type=principal.principal_type,
