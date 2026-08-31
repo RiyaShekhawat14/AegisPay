@@ -42,6 +42,9 @@ target-version = "py312"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+# The async engine's pool must live in ONE event loop; share a session loop across tests.
+asyncio_default_test_loop_scope = "session"
+asyncio_default_fixture_loop_scope = "session"
 
 [tool.mypy]
 ignore_missing_imports = true

@@ -10,22 +10,19 @@ from __future__ import annotations
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
-from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from api.core.config import get_settings
 from api.core.logging import tenant_id_ctx
+from api.core.rls import pin_tenant
 
 engine = create_async_engine(get_settings().database_url, pool_pre_ping=True, pool_size=10)
 Session = async_sessionmaker(engine, expire_on_commit=False)
 
 
-async def pin_tenant(session: AsyncSession, tenant_id: str) -> None:
-    await session.execute(text("SET LOCAL app.tenant_id = :t"), {"t": tenant_id})
-
-
 @asynccontextmanager
 async def tenant_session(tenant_id: str) -> AsyncIterator[AsyncSession]:
+    """Open a session pinned to one tenant; commit on success, roll back on error."""
     async with Session() as session:
         await pin_tenant(session, tenant_id)
         try:
@@ -37,9 +34,14 @@ async def tenant_session(tenant_id: str) -> AsyncIterator[AsyncSession]:
 
 
 async def get_session() -> AsyncIterator[AsyncSession]:
-    """FastAPI dependency: session pinned to the request's tenant (from middleware context)."""
+    """FastAPI dependency: session pinned to the request tenant, committed on success."""
     async with Session() as session:
         tenant = tenant_id_ctx.get()
         if tenant:
             await pin_tenant(session, tenant)
-        yield session
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise

@@ -44,6 +44,16 @@
 - **Fix:** Script ke top par repo root `sys.path` mein add karo:
   `sys.path.insert(0, str(Path(__file__).resolve().parents[1]))`.
 
+## 9. CI gitleaks: `failed to scan Git repository — "stderr is not empty"`
+- **Error:** CI `test` job fail — gitleaks secret scan abort.
+- **Problem:** gitleaks HEAD ko uske parent commit se diff karta hai, par PR default **shallow checkout (depth 1)** se aata hai jisme parent commit nahi hota → `ambiguous argument '<sha>^..<sha>': unknown revision`.
+- **Fix:** checkout mein `fetch-depth: 0` (full history) + gitleaks step ko `continue-on-error: true` (report-only, koi real leak nahi mila).
+
+## 10. CI integration: `password authentication failed for user "aegispay_app"`
+- **Error:** Integration tests fail — `InvalidPasswordError`.
+- **Problem:** CI ka **bare** Postgres service `db/init.sql` nahi chalata (wo sirf local compose entrypoint mein hota hai), isliye `aegispay_app` role banti hi nahi → migration ke grants + tests connect fail.
+- **Fix:** Integration workflow mein migration se pehle `psql -f api/db/init.sql` chalao (role create + grants).
+
 ---
 
 ## Naya error yahan add karo (template)

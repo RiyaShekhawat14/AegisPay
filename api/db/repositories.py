@@ -5,6 +5,7 @@ RLS restricts it to the caller's merchant even on a bug. Money mutations are tra
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 from typing import TypeVar
 
 from sqlalchemy import select
@@ -44,7 +45,7 @@ class PaymentRepo(BaseRepo):
             return None
         p.status = status
         if status == "UNKNOWN" and p.unknown_since is None:
-            p.unknown_since = __import__("datetime").datetime.utcnow()
+            p.unknown_since = datetime.now(UTC)
         await self.session.flush()
         return p
 
