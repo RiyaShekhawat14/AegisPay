@@ -5,7 +5,7 @@ services:
       POSTGRES_USER: aegispay_migration
       POSTGRES_PASSWORD: aegispay
       POSTGRES_DB: aegispay
-    ports: ["5432:5432"]
+    ports: ["5433:5432"]
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ../../api/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro

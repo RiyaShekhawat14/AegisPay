@@ -9,5 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 
 async def pin_tenant(session: AsyncSession, tenant_id: str) -> None:
-    """Pin the RLS tenant context for the current transaction."""
-    await session.execute(text("SET LOCAL app.tenant_id = :t"), {"t": tenant_id})
+    """Pin the RLS tenant context for the current transaction.
+
+    Uses `set_config(..., is_local=true)` rather than `SET LOCAL` because Postgres does not
+    allow a bound parameter in a SET statement. `is_local=true` keeps it transaction-scoped.
+    """
+    await session.execute(text("select set_config('app.tenant_id', :t, true)"), {"t": tenant_id})
