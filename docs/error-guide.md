@@ -64,6 +64,22 @@
 - **Problem:** `resolve_principal` mein `verify_jwt` **ValueError** raise karta hai (bad signature/expired), par wo catch nahi tha → generic 500 handler tak pahunch jaata tha.
 - **Fix:** `resolve_principal` mein `ValueError` catch karke `HTTPException(401, "invalid token")` raise karo — bad/expired token ab 401 deta hai.
 
+## 12. Auth: bad JWT signature → 500 (should be 401)
+- **Error:** E2E test — invalid/expired token par `/v1/me` `500 INTERNAL_ERROR`.
+- **Problem:** `resolve_principal` mein `verify_jwt` **ValueError** raise karta hai (bad signature/expired), par wo catch nahi tha → generic 500 handler tak pahunch jaata tha.
+- **Fix:** `resolve_principal` mein `ValueError` catch karke `HTTPException(401, "invalid token")` raise karo — bad/expired token ab 401 deta hai.
+
+## 13. Core API: inconsistent error envelope (401 me `{"detail":...}`)
+- **Error:** E2E — auth error `GET /v1/me` no-token → `{"detail":"authentication required"}` (FastAPI default), baaki errors `{"code","message","request_id","retryable"}`. API ka error contract consistent nahi tha.
+- **Problem:** `resolve_principal` rahi `HTTPException(401)`; handlers sirf `AppError` ko envelope dete the, `HTTPException`/`RequestValidationError` ko nahi. Isliye `HTTPException`-based errors FastAPI ke default `{"detail":...}` format me aate the.
+- **Fix:** `exceptions.py` me handlers add kiya — `HTTPException` (→ status-based code: 401→`AUTHENTICATION_ERROR`, 404→`NOT_FOUND`, ...) aur `RequestValidationError` (→`VALIDATION_ERROR`, 422). Ab sab errors same envelope dete hain. `_http_code()` helper se status→code mapping.
+- **Note (framework limitation):** FastAPI 0.141 me **router-level 404** (unknown route) aur **uncaught 500** app handlers ke through nahi aate — wo FastAPI ke default response dete hain. Isliye consistency unit-test (`_http_code`) se prove ki gyi; 401/application errors E2E se.
+
+## 14. Core API: `/v1/readyz` hamesha `ready` (DB check nahi) + `/v1/live` missing
+- **Error:** `/v1/readyz` DB down hone par bhi `{"status":"ready"}` deta tha (hardcoded); `/v1/live` route hi nahi tha → 404.
+- **Problem:** Readiness probe sirf hardcoded string return karta tha; koi DB connectivity check nahi.
+- **Fix:** `/v1/readyz` ab DB ko ping karta hai (`select 1`); DB nahi pahuncha toh **503** `{"code":"NOT_READY"}`. Aur naya `GET /v1/live` (200) add kiya.
+
 ---
 
 ## Naya error yahan add karo (template)
