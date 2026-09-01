@@ -6,7 +6,8 @@ subclasses to the right HTTP status; the request_id is attached by the request-i
 
 from __future__ import annotations
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 
@@ -63,6 +64,31 @@ def register_error_handlers(app: FastAPI) -> None:
             )
         return JSONResponse(error_payload(exc), status_code=exc.status)
 
+    @app.exception_handler(HTTPException)
+    async def _http_error(request: Request, exc: HTTPException) -> JSONResponse:
+        # Envelope FastAPI's own errors (404, 401, 405, ...) so the API is consistent.
+        return JSONResponse(
+            {
+                "code": _http_code(exc.status_code),
+                "message": str(exc.detail),
+                "request_id": getattr(request.state, "request_id", ""),
+                "retryable": False,
+            },
+            status_code=exc.status_code,
+        )
+
+    @app.exception_handler(RequestValidationError)
+    async def _validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
+        return JSONResponse(
+            {
+                "code": "VALIDATION_ERROR",
+                "message": str(exc.errors()),
+                "request_id": getattr(request.state, "request_id", ""),
+                "retryable": False,
+            },
+            status_code=422,
+        )
+
     @app.exception_handler(Exception)
     async def _unhandled(request: Request, exc: Exception) -> JSONResponse:
         return JSONResponse(
@@ -74,3 +100,16 @@ def register_error_handlers(app: FastAPI) -> None:
             },
             status_code=500,
         )
+
+
+def _http_code(status: int) -> str:
+    """Map a raw HTTP status to the standard error code so every error shares the envelope."""
+    return {
+        400: "VALIDATION_ERROR",
+        401: "AUTHENTICATION_ERROR",
+        403: "AUTHORIZATION_ERROR",
+        404: "NOT_FOUND",
+        409: "CONFLICT",
+        422: "VALIDATION_ERROR",
+        429: "RATE_LIMITED",
+    }.get(status, f"HTTP_{status}")
