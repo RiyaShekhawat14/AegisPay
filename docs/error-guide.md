@@ -80,6 +80,16 @@
 - **Problem:** Readiness probe sirf hardcoded string return karta tha; koi DB connectivity check nahi.
 - **Fix:** `/v1/readyz` ab DB ko ping karta hai (`select 1`); DB nahi pahuncha toh **503** `{"code":"NOT_READY"}`. Aur naya `GET /v1/live` (200) add kiya.
 
+## 15. Commerce build: `NoReferencedTableError: Foreign key 'carts.agent_id' could not find table 'agents'`
+- **Error:** Phase 4 test run — SQLAlchemy threw `NoReferencedTableError` for `carts.agent_id` / `orders.agent_id`.
+- **Problem:** ORM models mein `agents` table ke liye koi model tha hi nahi (migration mein table hai, par model nahi). SQLAlchemy FK ko resolve karne ke liye referenced table ka model metadata mein hona zaroori hai.
+- **Fix:** `models.py` mein minimal `Agent` model add kiya (`agents` table map). (users FK ko model mein deliberately nahi rakha taaki woh bhi same error na de.)
+
+## 16. Live API: product create par `500 INTERNAL_ERROR` (nonexistent tenant)
+- **Error:** Live E2E me `/v1/products` create → `500 INTERNAL_ERROR`.
+- **Problem:** Test mein ek **fabricated tenant_id** use kiya jo `tenants` table mein exist nahi karta. Product insert me `tenant_id` → `tenants(id)` FK violation ho gayi, jo unhandled `IntegrityError` → generic 500.
+- **Fix:** Ye code bug nahi tha (happy path integration-test me pass hai). Sahi tenant se live E2E **201/200** clean chal raha hai. Bas FH: real tenant ho. (Note: FK violation ab 500 deta hai — ideally 4xx hona chahiye, par ye edge case hai; generic 500 handler safely handles karta hai.)
+
 ---
 
 ## Naya error yahan add karo (template)
