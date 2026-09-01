@@ -90,6 +90,21 @@
 - **Problem:** Test mein ek **fabricated tenant_id** use kiya jo `tenants` table mein exist nahi karta. Product insert me `tenant_id` → `tenants(id)` FK violation ho gayi, jo unhandled `IntegrityError` → generic 500.
 - **Fix:** Ye code bug nahi tha (happy path integration-test me pass hai). Sahi tenant se live E2E **201/200** clean chal raha hai. Bas FH: real tenant ho. (Note: FK violation ab 500 deta hai — ideally 4xx hona chahiye, par ye edge case hai; generic 500 handler safely handles karta hai.)
 
+## 17. Phase 5 build: `column authorizations.updated_at does not exist`
+- **Error:** Authorization INSERT → `UndefinedColumnError: authorizations.updated_at does not exist`.
+- **Problem:** `Authorization` model `TimestampMixin` use kar raha tha, jo `updated_at` add karta hai. Par migration ke `authorizations` table mein sirf `created_at` hai (`updated_at` nahi). Model ↔ table mismatch.
+- **Fix:** `Authorization` se `TimestampMixin` hata ke `created_at` explicitly map kiya (server_default). Ab INSERT sirf existing columns use karta hai.
+
+## 18. Phase 5 build: `approvals` me NOT NULL `expires_at` missing
+- **Error:** Approval INSERT → `NotNullViolationError: null value in column "expires_at" of relation "approvals"`.
+- **Problem:** `Approval` model mein `expires_at` column map hi nahi tha, par table me `not null` hai.
+- **Fix:** Model me `expires_at` (DateTime, not null) + `created_at` add kiya, aur service mein approve() par `expires_at` set karta hai.
+
+## 19. Phase 5 test: `approvals.approver_id` FK violation (`Key not present in users`)
+- **Error:** High-risk approve → `ForeignKeyViolationError: approvals_approver_id_fkey ... Key is not present in table "users"`.
+- **Problem:** Approve test me random `uuid4()` approver_id use kiya, par DB me `approvals.approver_id → users(id)` real FK hai — approver ko `users` me exist karna chahiye.
+- **Fix:** Test helper `_approvers(n)` add kiya jo pehle `users` rows create karta hai (password_hash NOT NULL), phir un id se approve karta hai.
+
 ---
 
 ## Naya error yahan add karo (template)
