@@ -5,8 +5,8 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, func
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, String, func
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -102,3 +102,35 @@ class CartItem(Base, TenantMixin):
     quantity: Mapped[int] = mapped_column(Integer)
     unit_price_minor: Mapped[int] = mapped_column(BigInteger)
     line_total_minor: Mapped[int] = mapped_column(BigInteger)
+
+
+class Authorization(Base, TenantMixin):
+    __tablename__ = "authorizations"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    agent_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("agents.id"))
+    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    cart_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("carts.id"))
+    cart_hash: Mapped[str] = mapped_column(String(128))
+    amount_minor: Mapped[int] = mapped_column(BigInteger)
+    currency: Mapped[str] = mapped_column(String(3), default="INR")
+    policy_version: Mapped[str] = mapped_column(String(32))
+    status: Mapped[str] = mapped_column(String(32), default="VALID")
+    single_use: Mapped[bool] = mapped_column(Boolean, default=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    risk: Mapped[dict | None] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Approval(Base, TenantMixin):
+    __tablename__ = "approvals"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    authorization_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("authorizations.id")
+    )
+    scope_hash: Mapped[str] = mapped_column(String(128), default="")
+    approver_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    decision: Mapped[str] = mapped_column(String(16), default="PENDING")
+    status: Mapped[str] = mapped_column(String(32), default="PENDING")
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
