@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, DateTime, ForeignKey, String, func
+from sqlalchemy import BigInteger, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -34,6 +34,7 @@ class Order(Base, TimestampMixin, TenantMixin):
     total_minor: Mapped[int] = mapped_column(BigInteger)
     status: Mapped[str] = mapped_column(String(32), default="CREATED")
     policy_version: Mapped[str] = mapped_column(String(32))
+    cart_hash: Mapped[str] = mapped_column(String(128))
     idempotency_key: Mapped[str] = mapped_column(String(128), unique=True)
 
 
@@ -60,3 +61,44 @@ class Campaign(Base, TimestampMixin, TenantMixin):
     spent_minor: Mapped[int] = mapped_column(BigInteger, default=0)
     discount_pct: Mapped[float | None]
     min_margin_pct: Mapped[float | None]
+
+
+class Agent(Base, TimestampMixin, TenantMixin):
+    __tablename__ = "agents"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(128))
+    type: Mapped[str] = mapped_column(String(32))
+    status: Mapped[str] = mapped_column(String(32), default="ACTIVE")
+
+
+class Product(Base, TimestampMixin, TenantMixin):
+    __tablename__ = "products"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    sku: Mapped[str] = mapped_column(String(128))
+    name: Mapped[str] = mapped_column(String(128))
+    category: Mapped[str | None] = mapped_column(String(64))
+    price_minor: Mapped[int] = mapped_column(BigInteger)
+    currency: Mapped[str] = mapped_column(String(3), default="INR")
+    status: Mapped[str] = mapped_column(String(32), default="ACTIVE")
+
+
+class Cart(Base, TimestampMixin, TenantMixin):
+    __tablename__ = "carts"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    agent_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("agents.id"))
+    status: Mapped[str] = mapped_column(String(32), default="CREATED")
+    currency: Mapped[str] = mapped_column(String(3), default="INR")
+    cart_hash: Mapped[str | None] = mapped_column(String(128))
+    price_version: Mapped[str | None] = mapped_column(String(32))
+    total_minor: Mapped[int] = mapped_column(BigInteger, default=0)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class CartItem(Base, TenantMixin):
+    __tablename__ = "cart_items"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    cart_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("carts.id"))
+    product_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("products.id"))
+    quantity: Mapped[int] = mapped_column(Integer)
+    unit_price_minor: Mapped[int] = mapped_column(BigInteger)
+    line_total_minor: Mapped[int] = mapped_column(BigInteger)

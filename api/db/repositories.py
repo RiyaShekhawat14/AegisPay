@@ -11,7 +11,7 @@ from typing import TypeVar
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api.db.models import Base, Campaign, Order, Payment
+from api.db.models import Base, Campaign, Cart, CartItem, Order, Payment, Product
 
 T = TypeVar("T", bound=Base)
 
@@ -24,6 +24,28 @@ class BaseRepo:
         self.session.add(obj)
         await self.session.flush()
         return obj
+
+
+class ProductRepo(BaseRepo):
+    async def get(self, product_id: uuid.UUID) -> Product | None:
+        return await self.session.get(Product, product_id)
+
+    async def by_sku(self, sku: str) -> Product | None:
+        res = await self.session.execute(select(Product).where(Product.sku == sku))
+        return res.scalar_one_or_none()
+
+    async def list(self) -> list[Product]:
+        res = await self.session.execute(select(Product).order_by(Product.created_at))
+        return list(res.scalars().all())
+
+
+class CartRepo(BaseRepo):
+    async def get(self, cart_id: uuid.UUID) -> Cart | None:
+        return await self.session.get(Cart, cart_id)
+
+    async def items(self, cart_id: uuid.UUID) -> list[CartItem]:
+        res = await self.session.execute(select(CartItem).where(CartItem.cart_id == cart_id))
+        return list(res.scalars().all())
 
 
 class OrderRepo(BaseRepo):
