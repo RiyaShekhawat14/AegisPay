@@ -60,7 +60,11 @@ async def resolve_principal(
 ) -> Principal:
     if credentials is None or not credentials.credentials:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "authentication required")
-    return _principal_from_token(credentials.credentials)
+    try:
+        return _principal_from_token(credentials.credentials)
+    except ValueError:
+        # Bad signature / expired / malformed token -> 401, never a 500.
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "invalid token")
 
 
 def require_roles(principal: Principal, roles: set[str]) -> Principal:
