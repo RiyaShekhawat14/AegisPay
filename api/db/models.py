@@ -147,3 +147,18 @@ class WebhookEvent(Base, TenantMixin):
     signature_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     status: Mapped[str] = mapped_column(String(32), default="RECEIVED")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class AuditEvent(Base, TenantMixin):
+    __tablename__ = "audit_events"
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    event_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), default=uuid.uuid4)
+    event_type: Mapped[str] = mapped_column(String(64))
+    actor_type: Mapped[str] = mapped_column(String(32))
+    actor_id: Mapped[str | None] = mapped_column(String(64))
+    correlation_id: Mapped[str | None] = mapped_column(String(128))
+    transaction_id: Mapped[str | None] = mapped_column(String(128))
+    payload: Mapped[dict] = mapped_column(JSONB, default=dict)
+    prev_hash: Mapped[str] = mapped_column(String(128), default="")
+    event_hash: Mapped[str] = mapped_column(String(128))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

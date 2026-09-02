@@ -130,6 +130,16 @@
 - **Problem:** `reconcile_unknown()` ne `session.flush()` kiya tha (change in-memory), lekin **commit nahi** kiya. Tab session close hone par change lost ho gaya → next read par purana UNKNOWN mila.
 - **Fix:** Service me `await session.flush()` ko `await session.commit()` se replace kiya (self-contained atomic op). Router path (`DbSession` dependency) waise bhi commit karta hai, double-commit harmless hai.
 
+## 25. Phase 8: audit chain verify hamesha `False` (hash mismatch)
+- **Error:** Append 2 events ke baad `verify_chain()` → `False`, chain ko intact hona chahiye tha.
+- **Problem:** Event ka `event_hash` ledger ke **Python timestamp** se compute hota hai, par DB `created_at` ko apne **alag `now()`** se set karta hai. Dono timestamps microsecond level par differ → recompute/hash mismatch.
+- **Fix:** `append_audit` me `row.created_at = datetime.fromisoformat(event.created_at)` set kiya — DB wahi timestamp store karta hai jo hash me use hua. Verify ab match karta hai.
+
+## 26. Phase 8: `audit_events` INSERT se `new row violates row-level security`
+- **Error:** App role `INSERT INTO audit_events` → `InsufficientPrivilegeError` (RLS deny).
+- **Problem:** `audit_events` RLS enabled hai par sirf **SELECT policy** tha. RLS enabled table me kisi command ke liye policy na ho toh wo **deny all** hota hai, isliye INSERT block ho jaata tha (grant hone ke baad bhi).
+- **Fix:** Migration + live DB me `create policy audit_insert on audit_events for insert with check (tenant_id = current_tenant())` add kiya — ab app role apne tenant ke andar append kar sakta hai (update/delete abhi bhi revoked).
+
 ---
 
 ## Naya error yahan add karo (template)
