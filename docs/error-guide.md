@@ -105,6 +105,21 @@
 - **Problem:** Approve test me random `uuid4()` approver_id use kiya, par DB me `approvals.approver_id → users(id)` real FK hai — approver ko `users` me exist karna chahiye.
 - **Fix:** Test helper `_approvers(n)` add kiya jo pehle `users` rows create karta hai (password_hash NOT NULL), phir un id se approve karta hai.
 
+## 20. Phase 6: `MemOutbox.emit() missing 1 required positional argument: 'payload'`
+- **Error:** Payment flow → `TypeError: MemOutbox.emit() missing 1 required positional argument: 'payload'`.
+- **Problem:** `initiate_payment()` ke default par `outbox=MemOutbox` tha — **class** pass ho rahi thi, instance nahi. Toh `MemOutbox.emit(...)` call par `self` drop ho jaata hai → sirf 2 args milte.
+- **Fix:** Default ko `None` karke andar `outbox = outbox or MemOutbox()` (instance) banaya.
+
+## 21. Phase 6: payments INSERT me `tenant_id` NULL → RLS `new row violates row-level security`
+- **Error:** Payment save → `ProgrammingError: new row violates row-level security policy for table "payments"` (tenant_id thodi null).
+- **Problem:** `DbPaymentAdapter.save()` ORM `Payment` me `tenant_id` set hi nahi karta tha (TenantMixin required hai, par koi default nahi) → NULL → RLS `WITH CHECK` fail.
+- **Fix:** `DbPaymentAdapter` ko `tenant_id` pass karke `save()` me `tenant_id=uuid.UUID(...)` set kiya.
+
+## 22. Phase 6: payment re-fetch se `payment not persisted`
+- **Error:** Router me payment create → `500 "payment not persisted"`.
+- **Problem:** Flow ka `payment.id` = `uuid4().hex` (32-char string), but `DbPaymentAdapter.save()` ORM `Payment` pe `id` set nahi karta tha, so DB row ko **alag** `uuid4()` id milti thi. Router `outcome.payment_id` se row dhoondta tha, milta nahi.
+- **Fix:** `save()` me `id=uuid.UUID(p.id)` set kiya — ab DB row ki id == flow ki payment_id.
+
 ---
 
 ## Naya error yahan add karo (template)
