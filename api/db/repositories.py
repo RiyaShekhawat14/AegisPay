@@ -61,6 +61,16 @@ class PaymentRepo(BaseRepo):
     async def get(self, payment_id: uuid.UUID) -> Payment | None:
         return await self.session.get(Payment, payment_id)
 
+    async def by_provider_payment_id(self, provider_payment_id: str) -> Payment | None:
+        res = await self.session.execute(
+            select(Payment).where(Payment.provider_payment_id == provider_payment_id)
+        )
+        return res.scalar_one_or_none()
+
+    async def list_unknown(self) -> list[Payment]:
+        res = await self.session.execute(select(Payment).where(Payment.status == "UNKNOWN"))
+        return list(res.scalars().all())
+
     async def update_status(self, payment_id: uuid.UUID, status: str) -> Payment | None:
         p = await self.session.get(Payment, payment_id)
         if p is None:
