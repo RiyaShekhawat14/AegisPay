@@ -349,6 +349,9 @@ end $$;
 alter table audit_events enable row level security;
 create policy audit_isolation on audit_events
   for select using (tenant_id = current_tenant());
+-- allow the app role to append (WITH CHECK scopes it to its tenant); update/delete stay revoked
+create policy audit_insert on audit_events
+  for insert with check (tenant_id = current_tenant());
 
 -- ---- application role grants ----
 -- The app role (created in db/init.sql) does DML only. It is NOT a superuser and has no
