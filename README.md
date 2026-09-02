@@ -1,7 +1,5 @@
 # AegisPay
 
-![CI](https://github.com/RiyaShekhawat14/AegisPay/actions/workflows/ci.yml/badge.svg)
-
 > **The Trust &amp; Growth Layer for Agentic Commerce**
 
 **AI can reason and recommend. Only AegisPay's deterministic control plane can authorize
