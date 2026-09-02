@@ -120,6 +120,16 @@
 - **Problem:** Flow ka `payment.id` = `uuid4().hex` (32-char string), but `DbPaymentAdapter.save()` ORM `Payment` pe `id` set nahi karta tha, so DB row ko **alag** `uuid4()` id milti thi. Router `outcome.payment_id` se row dhoondta tha, milta nahi.
 - **Fix:** `save()` me `id=uuid.UUID(p.id)` set kiya — ab DB row ki id == flow ki payment_id.
 
+## 23. Phase 7 test: `payments_order_id_fkey` violation (payment insert)
+- **Error:** Payment seed → `ForeignKeyViolationError: payments.order_id Key is not present in table "orders"`.
+- **Problem:** Test me payment banate samay ek **random order_id** use kiya jo orders table me exists nahi karta; payment.order_id FK hai.
+- **Fix:** Test helper ne tenant → agent → cart → order → payment ka **pura chain** seed kiya, phir payment ko real order_id se banaya.
+
+## 24. Phase 7: reconciliation `UNKNOWN` me atka (commit nahi hua)
+- **Error:** Reconcile ke baad payment `'UNKNOWN'` hi raha (PAID nahi hua).
+- **Problem:** `reconcile_unknown()` ne `session.flush()` kiya tha (change in-memory), lekin **commit nahi** kiya. Tab session close hone par change lost ho gaya → next read par purana UNKNOWN mila.
+- **Fix:** Service me `await session.flush()` ko `await session.commit()` se replace kiya (self-contained atomic op). Router path (`DbSession` dependency) waise bhi commit karta hai, double-commit harmless hai.
+
 ---
 
 ## Naya error yahan add karo (template)

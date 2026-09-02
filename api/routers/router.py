@@ -8,6 +8,8 @@ from api.routers.health import router as health_router
 from api.routers.orders import router as orders_router
 from api.routers.payments import router as payments_router
 from api.routers.products import router as products_router
+from api.routers.reconciliation import router as reconciliation_router
+from api.routers.webhooks import router as webhooks_router
 
 router = APIRouter()
 router.include_router(health_router)
@@ -16,3 +18,5 @@ router.include_router(carts_router)
 router.include_router(orders_router)
 router.include_router(authorizations_router)
 router.include_router(payments_router)
+router.include_router(webhooks_router)
+router.include_router(reconciliation_router)
