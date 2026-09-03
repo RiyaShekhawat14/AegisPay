@@ -1,92 +1,78 @@
 "use client";
 import AppShell from "@/components/AppShell";
-import { Badge, Button, Card } from "@/components";
+import { Badge, Button, Panel } from "@/components/ui";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { checkout, getProducts, getSession, inr, Product, requestAuthorization } from "@/lib/api";
+import { getProducts, getSession, inr, Product } from "@/lib/api";
 
 export default function CartPage() {
   const router = useRouter();
   const [line, setLine] = useState<{ productId: string; qty: number }[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [result, setResult] = useState<{ orderId: string; totals: string } | null>(null);
-  const [msg, setMsg] = useState("");
 
   useEffect(() => {
-    const cart = JSON.parse(localStorage.getItem("aegispay.cart") ?? '{"cartId":"","items":{}}') as {
-      cartId: string;
-      items: Record<string, number>;
-    };
+    const cart = JSON.parse(localStorage.getItem("aegispay.cart") ?? '{"cartId":"","items":{}}') as { cartId: string; items: Record<string, number> };
     setLine(Object.entries(cart.items).map(([productId, qty]) => ({ productId, qty })));
-    getProducts(getSession().token || undefined).catch(() => setProducts([]));
-    getProducts().then(setProducts).catch(() => setProducts([]));
+    getProducts(getSession().token || undefined).then(setProducts).catch(() => setProducts([]));
   }, []);
 
   const priceOf = (id: string) => products.find((p) => p.id === id)?.price_minor ?? 0;
   const total = line.reduce((s, it) => s + priceOf(it.productId) * it.qty, 0);
 
-  async function pay() {
-    const cart = JSON.parse(localStorage.getItem("aegispay.cart") ?? '{"cartId":"","items":{}}');
-    const { token } = getSession();
-    if (!token || !cart.cartId) {
-      setResult({ orderId: "ord_demo", totals: inr(total) });
-      return;
-    }
-    try {
-      const order = await checkout(token, cart.cartId);
-      const authz = await requestAuthorization(token, order.cart_id);
-      setResult({ orderId: order.id, totals: inr(order.total_minor) });
-      setMsg(authz.status === "VALID" ? "Authorized ✓" : `Authorization: ${authz.status}`);
-    } catch (err) {
-      setMsg((err as Error).message);
-    }
+  function setQty(id: string, d: number) {
+    const cart = JSON.parse(localStorage.getItem("aegispay.cart") ?? '{"cartId":"","items":{}}') as { cartId: string; items: Record<string, number> };
+    cart.items[id] = (cart.items[id] ?? 0) + d;
+    if (cart.items[id] <= 0) delete cart.items[id];
+    localStorage.setItem("aegispay.cart", JSON.stringify(cart));
+    setLine(Object.entries(cart.items).map(([productId, qty]) => ({ productId, qty })));
   }
 
   return (
     <AppShell role="buyer">
-      <div className="mb-5 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">Your cart</h1>
-          <p className="text-sm text-muted">locked &amp; hashed · server-priced</p>
+      <div className="mx-auto max-w-lg">
+        <div className="mb-4 flex items-center gap-2 border-b border-border pb-3">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-ink text-sm text-white">◈</div>
+          <div><b className="text-sm">Your cart</b><div className="text-[11px] text-muted">locked &amp; hashed</div></div>
+          <Badge tone="neutral" className="ml-auto">server-priced</Badge>
         </div>
-        <Button variant="ghost" onClick={() => router.push("/shop")}>← Keep shopping</Button>
-      </div>
 
-      <Card title="Items">
-        {result && (
-          <div className="mb-3 rounded-lg bg-ok/10 p-3 text-sm">
-            <Badge tone="ok">Paid</Badge> order <b>{result.orderId}</b> · {result.totals} {msg && <span className="ml-2 text-muted">{msg}</span>}
-          </div>
-        )}
         {line.length === 0 ? (
-          <p className="text-sm text-muted">Your cart is empty.</p>
+          <Panel title="Items"><p className="text-sm text-muted">Your cart is empty.</p></Panel>
         ) : (
-          <ul className="divide-y divide-border/60 text-sm">
-            {line.map((it) => (
-              <li key={it.productId} className="flex items-center gap-3 py-2">
-                <div className="text-lg">🛍️</div>
-                <div className="flex-1"><b>{products.find((p) => p.id === it.productId)?.name ?? it.productId}</b></div>
-                <div className="font-semibold">{inr(priceOf(it.productId))} × {it.qty}</div>
-              </li>
-            ))}
-          </ul>
+          <Panel title="Items">
+            <div className="space-y-2">
+              {line.map((it) => (
+                <div key={it.productId} className="flex items-center gap-3 rounded-lg border border-border p-2.5">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-hover text-lg">🛍️</div>
+                  <div className="min-w-0 flex-1"><b className="text-sm">{products.find((p) => p.id === it.productId)?.name ?? it.productId}</b></div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setQty(it.productId, -1)} className="h-5 w-5 rounded border border-border text-xs">−</button>
+                    <span className="text-sm">{it.qty}</span>
+                    <button onClick={() => setQty(it.productId, 1)} className="h-5 w-5 rounded border border-border text-xs">+</button>
+                  </div>
+                  <div className="font-semibold tabular-nums">{inr(priceOf(it.productId))}</div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 border-t border-border pt-3">
+              <div className="flex justify-between text-sm text-muted"><span>Subtotal</span><span className="font-semibold text-ink">{inr(total)}</span></div>
+              <div className="flex justify-between text-sm text-muted"><span>Shipping</span><span>₹0</span></div>
+              <div className="mt-1 flex justify-between text-base font-bold"><span>Total</span><span>{inr(total)}</span></div>
+            </div>
+          </Panel>
         )}
+
         {line.length > 0 && (
-          <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-            <div className="text-sm text-muted">Total</div>
-            <div className="text-lg font-bold">{inr(total)}</div>
+          <div className="mt-3 rounded-lg bg-hover px-3 py-2 text-xs">
+            <Badge tone="ok">locked</Badge> Within your ₹4,000 limit. The amount is final — the AI can&apos;t change it.
           </div>
         )}
-      </Card>
 
-      {line.length > 0 && (
-        <Button className="mt-4 w-full" variant="primary" onClick={pay}>
-          Authorize &amp; pay {inr(total)}
-        </Button>
-      )}
-      <p className="mt-2 text-center text-[11px] text-muted">
-        Low risk · auto-approved by policy. The AI can’t change the amount.
-      </p>
+        <div className="mt-4 flex gap-2">
+          <Button variant="ghost" className="flex-1" onClick={() => router.push("/shop")}>← Keep shopping</Button>
+          {line.length > 0 && <Button variant="primary" className="flex-1" onClick={() => router.push("/shop/checkout")}>Proceed to checkout</Button>}
+        </div>
+      </div>
     </AppShell>
   );
 }
