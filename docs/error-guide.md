@@ -180,6 +180,11 @@
 - **Problem:** Webhooks untrusted hain; prod me secret required hai. Dev/test me mock fallback ko treat karna theek hai, par prod me ye security gap hai.
 - **Fix:** Red-team suite me isko document kiya. Production must set `RAZORPAY_WEBHOOK_SECRET` (router phir HMAC verify karta hai). No test gap — red-team suite attacks safely blocked.
 
+## 35. Phase 16 (E2E): Playwright UI smoke still scaffold (no browser stack)
+- **Error/Note:** `tests/e2e/playwright.config.ts` + `specs/checkout-flow.spec.ts` scaffold hain; browser-run ui test ko frontend+backend running stack chahiye (compose orchestration) — abhi CI me nahi chalta.
+- **Problem:** UI E2E ke liye live server + browser chahiye, jo abhi set-up nahi hai. API-level full-chain proof isi phase me milti hai.
+- **Fix:** API-level E2E (`test_end_to_end.py`) — full Control Plane chain (auth→catalog→cart→checkout→authz→payment→audit→passport) + reconciliation — CI integration job me chalti hai. Playwright UI smoke ko compose-orchestrated stack ke saath later follow-up.
+
 ---
 
 ## Naya error yahan add karo (template)
