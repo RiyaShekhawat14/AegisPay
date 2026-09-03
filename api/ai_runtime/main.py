@@ -2,19 +2,33 @@
 
 This service is the ONLY thing that talks to the LLM. It has NO database credentials, NO
 Razorpay secrets, and NO money tools. It compiles agent output into a validated
-CommerceIntent and calls the control plane. Security here is a process/permission
+CommerceIntent and requests actions via the control plane. Security is a process/permission
 boundary, not a language split.
 """
 
-from fastapi import FastAPI
+from typing import Annotated
 
-from ai_runtime.schemas import CommerceIntent
+from fastapi import Depends, FastAPI
+
+from ai_runtime.agent import run_agent
+from ai_runtime.schemas import AgentReply, CommerceIntent, RunIn
+from ai_runtime.tools.client import ControlPlaneClient
+from api.core.config import get_settings
 
 app = FastAPI(title="AegisPay AI Runtime", version="0.1.0")
 
 
-@app.post("/internal/intent/compile", response_model=CommerceIntent)
-async def compile_intent() -> CommerceIntent:
-    # TODO: run the LangGraph proposal graph, validate the structured output,
-    # and return a typed CommerceIntent for the control plane to gate.
-    raise NotImplementedError("intent compilation wired in a later milestone")
+def get_client() -> ControlPlaneClient:
+    s = get_settings()
+    return ControlPlaneClient(base_url=s.control_plane_url, token=s.control_plane_token)
+
+
+Client = Annotated[ControlPlaneClient, Depends(get_client)]
+
+
+@app.post("/agent/run", response_model=AgentReply)
+async def agent_run(body: RunIn, client: Client) -> AgentReply:
+    intent = CommerceIntent(
+        agent_id=body.agent_id, kind=body.kind, summary=body.summary, items=body.items
+    )
+    return AgentReply(**await run_agent(intent, client))

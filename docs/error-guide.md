@@ -140,6 +140,16 @@
 - **Problem:** `audit_events` RLS enabled hai par sirf **SELECT policy** tha. RLS enabled table me kisi command ke liye policy na ho toh wo **deny all** hota hai, isliye INSERT block ho jaata tha (grant hone ke baad bhi).
 - **Fix:** Migration + live DB me `create policy audit_insert on audit_events for insert with check (tenant_id = current_tenant())` add kiya — ab app role apne tenant ke andar append kar sakta hai (update/delete abhi bhi revoked).
 
+## 27. Lint: `B008 Do not perform function call Depends in argument defaults` (FDP)
+- **Error:** `Depends(get_client)` default arg par → ruff `B008`.
+- **Problem:** FastAPI purana style (default arg me `Depends()`) hai; ruff isko flag karta hai. Codebase already `Annotated` pattern use karta hai (`DbSession = Annotated[..., Depends(get_session)]`).
+- **Fix:** `Client = Annotated[ControlPlaneClient, Depends(get_client)]` banake endpoint me `client: Client` use kiya. (Depends() default arg me nahi.)
+
+## 28. Lint: `ASYNC210 Async functions should not call blocking HTTP methods`
+- **Error:** `await httpx.get(...)` (blocking top-level httpx) → ruff `ASYNC210`.
+- **Problem:** `httpx.get/post` sync hai; async function me use nahi hota.
+- **Fix:** `httpx.AsyncClient` use kiya (RazorpayAdapter jaisa) — `await self._client.get/post`.
+
 ---
 
 ## Naya error yahan add karo (template)
