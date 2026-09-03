@@ -11,6 +11,7 @@ from api.routers.orders import router as orders_router
 from api.routers.passport import router as passport_router
 from api.routers.payments import router as payments_router
 from api.routers.products import router as products_router
+from api.routers.protocol import router as protocol_router
 from api.routers.reconciliation import router as reconciliation_router
 from api.routers.webhooks import router as webhooks_router
 
@@ -26,3 +27,4 @@ router.include_router(reconciliation_router)
 router.include_router(audit_router)
 router.include_router(passport_router)
 router.include_router(grow_router)
+router.include_router(protocol_router)

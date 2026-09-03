@@ -165,6 +165,11 @@
 - **Problem:** SELL buyer ko cart/order setup karna hai (add item, checkout). Ye **money moves nahi** hain (sirf cart/order setup), par allowlist me add nahi the — guardrail test fail hota.
 - **Fix:** `ALLOWED_TOOLS` me `add_item` + `checkout` add kiya (cart/order setup). `capture`/`refund`/`execute_payment` ab bhi FORBIDDEN.
 
+## 32. Phase 12: gateway router me `Gateway.enter` auth double-verify (reuse pattern)
+- **Error:** Gateway route me token ko pehle `verify_jwt` karke claims (merchant_id/agent_id) nikalna padta hai, par `Gateway.enter` andar phir se `authenticate(token)` karta hai — double verify, par zaroori (claims chahiye before enter).
+- **Problem:** `Gateway.enter` signature me `authenticate` + `merchant_id`/`agent_id` alag chahiye; router ko claims pehle chahiye.
+- **Fix:** Router pehle `verify(token)` se claims nikalta hai, phir wahi token `_gateway.enter` ko pass karta hai (jo apne authenticate se subject jaght jaata hai). Redundant verify acceptable — Gateway unchanged reuse kiya.
+
 ---
 
 ## Naya error yahan add karo (template)
