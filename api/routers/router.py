@@ -5,6 +5,7 @@ from fastapi import APIRouter
 from api.routers.audit import router as audit_router
 from api.routers.authorizations import router as authorizations_router
 from api.routers.carts import router as carts_router
+from api.routers.grow import router as grow_router
 from api.routers.health import router as health_router
 from api.routers.orders import router as orders_router
 from api.routers.passport import router as passport_router
@@ -24,3 +25,4 @@ router.include_router(webhooks_router)
 router.include_router(reconciliation_router)
 router.include_router(audit_router)
 router.include_router(passport_router)
+router.include_router(grow_router)
