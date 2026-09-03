@@ -18,3 +18,24 @@ class CommerceIntent(BaseModel):
     kind: Literal["discover", "buy", "recommend"]
     summary: str
     items: list[IntentItem]
+
+
+class RunIn(BaseModel):
+    agent_id: str
+    kind: Literal["discover", "buy", "recommend"] = "buy"
+    summary: str = ""
+    items: list[IntentItem]
+
+
+class AgentAction(BaseModel):
+    tool: str
+    product_id: str
+    quantity: int
+    authorization_id: str | None = None
+
+
+class AgentReply(BaseModel):
+    kind: str
+    summary: str
+    catalog_count: int = 0
+    actions: list[AgentAction]

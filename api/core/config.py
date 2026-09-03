@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
     sqs_url: str = ""
 
+    # AI Runtime -> Control Plane (isolated service; AI only ever talks via this HTTP API)
+    control_plane_url: str = ""
+    control_plane_token: str = ""
+
     # Razorpay (test keys; secret never leaves the adapter boundary)
     razorpay_key_id: str = ""
     razorpay_key_secret: str = ""
