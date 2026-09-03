@@ -55,6 +55,7 @@ class Payment(Base, TimestampMixin, TenantMixin):
 class Campaign(Base, TimestampMixin, TenantMixin):
     __tablename__ = "campaigns"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    agent_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("agents.id"))
     name: Mapped[str] = mapped_column(String(128))
     status: Mapped[str] = mapped_column(String(32), default="DRAFT")
     budget_minor: Mapped[int] = mapped_column(BigInteger)
@@ -161,4 +162,19 @@ class AuditEvent(Base, TenantMixin):
     payload: Mapped[dict] = mapped_column(JSONB, default=dict)
     prev_hash: Mapped[str] = mapped_column(String(128), default="")
     event_hash: Mapped[str] = mapped_column(String(128))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Opportunity(Base, TenantMixin):
+    __tablename__ = "opportunities"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    agent_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("agents.id"))
+    kind: Mapped[str] = mapped_column(String(32))
+    anchor_product: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("products.id")
+    )
+    target_products: Mapped[list] = mapped_column(JSONB, default=list)
+    affinity: Mapped[float | None]
+    confidence: Mapped[float | None]
+    status: Mapped[str] = mapped_column(String(32), default="OPEN")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

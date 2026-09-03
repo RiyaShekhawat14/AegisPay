@@ -150,6 +150,16 @@
 - **Problem:** `httpx.get/post` sync hai; async function me use nahi hota.
 - **Fix:** `httpx.AsyncClient` use kiya (RazorpayAdapter jaisa) — `await self._client.get/post`.
 
+## 29. Phase 10: campaign create `400 "margin below floor"` (margin default 0)
+- **Error:** `POST /v1/campaigns` → `VALIDATION_ERROR: margin below floor`.
+- **Problem:** `check_caps` me `min_margin_pct=15` hai, aur default `margin_pct=0` (caller ne set nahi kiya) → `0 < 15` → reject.
+- **Fix:** Campaign create test me valid caps pass kiya (`margin_pct: 20, duration_days: 7`).
+
+## 30. Phase 10: `generate_opportunities` me `uuid.UUID(principal.subject)` → "badly formed hexadecimal UUID string"
+- **Error:** `POST /v1/opportunities/generate` → `500 ValueError: badly formed hexadecimal UUID string`.
+- **Problem:** `agent_id=uuid.UUID(principal.subject)` — token ka `sub` ("agent-1") ek valid UUID nahi hai.
+- **Fix:** `agent_id` ko route me request body se lete hain (`OpportunityGenerateIn.agent_id`), subject se derive nahi karte.
+
 ---
 
 ## Naya error yahan add karo (template)
