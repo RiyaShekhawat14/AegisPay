@@ -1,18 +1,99 @@
-// Thin typed API client. Types are generated from /api/openapi.yaml at build time.
-export type TenantId = string;
-
+// Typed API client for the AegisPay control plane.
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-export async function api<T>(path: string, init?: RequestInit): Promise<T> {
+type Role = "buyer" | "merchant";
+
+export type Product = {
+  id: string;
+  sku: string;
+  name: string;
+  category?: string | null;
+  price_minor: number;
+  currency: string;
+  status: string;
+};
+
+export type Opportunity = {
+  id: string;
+  kind: string;
+  anchor_product: string | null;
+  target_products: unknown[];
+  confidence: number | null;
+  status: string;
+};
+
+export type Campaign = {
+  id: string;
+  name: string;
+  status: string;
+  budget_minor: number;
+  spent_minor: number;
+};
+
+export type Cart = {
+  id: string;
+  status: string;
+  currency: string;
+  total_minor: number;
+  cart_hash: string | null;
+  items: { product_id: string; quantity: number; unit_price_minor: number; line_total_minor: number }[];
+};
+
+export type Order = { id: string; cart_id: string; status: string; total_minor: number; currency: string; cart_hash: string };
+
+export type Authorization = { id: string; cart_id: string; status: string; amount_minor: number; currency: string };
+
+export async function api<T>(path: string, init?: RequestInit & { token?: string }): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     ...init,
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+    headers: {
+      "Content-Type": "application/json",
+      ...(init?.token ? { Authorization: `Bearer ${init.token}` } : {}),
+      ...(init?.headers ?? {}),
+    },
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    throw new Error(body?.message ?? `Request failed: ${res.status}`);
+    throw new Error(body?.message ?? body?.detail ?? `Request failed: ${res.status}`);
   }
   return res.json() as Promise<T>;
 }
 
-export const health = () => api<{ status: string }>("/v1/health");
+export const getProducts = (token?: string) => api<Product[]>("/v1/products", { token });
+export const getOpportunities = (token?: string) => api<Opportunity[]>("/v1/opportunities", { token });
+export const createProduct = (token: string, body: { sku: string; name: string; price_minor: number; category?: string }) =>
+  api<Product>("/v1/products", { method: "POST", token, body: JSON.stringify(body) });
+export const generateOpportunities = (token: string, agentId: string) =>
+  api<Opportunity[]>("/v1/opportunities/generate", { method: "POST", token, body: JSON.stringify({ agent_id: agentId }) });
+export const createCampaign = (
+  token: string,
+  body: { agent_id: string; name: string; budget_minor: number; discount_pct: number; margin_pct: number; duration_days: number },
+) => api<Campaign>("/v1/campaigns", { method: "POST", token, body: JSON.stringify(body) });
+export const createCart = (token: string, agentId: string) =>
+  api<Cart>("/v1/carts", { method: "POST", token, body: JSON.stringify({ agent_id: agentId }) });
+export const addCartItem = (token: string, cartId: string, productId: string, quantity: number) =>
+  api<Cart>(`/v1/carts/${cartId}/items`, { method: "POST", token, body: JSON.stringify({ product_id: productId, quantity }) });
+export const checkout = (token: string, cartId: string) => api<Order>(`/v1/carts/${cartId}/checkout`, { method: "POST", token });
+export const requestAuthorization = (token: string, cartId: string) =>
+  api<Authorization>("/v1/authorizations", { method: "POST", token, body: JSON.stringify({ cart_id: cartId }) });
+
+// Client-side session (there is no user/password login endpoint yet; auth is token-based).
+const ROLE_KEY = "aegispay.role";
+const TOKEN_KEY = "aegispay.token";
+
+export function saveSession(role: Role, token = "") {
+  localStorage.setItem(ROLE_KEY, role);
+  localStorage.setItem(TOKEN_KEY, token);
+}
+export function getSession(): { role: Role | null; token: string } {
+  if (typeof window === "undefined") return { role: null, token: "" };
+  return { role: (localStorage.getItem(ROLE_KEY) as Role | null) ?? null, token: localStorage.getItem(TOKEN_KEY) ?? "" };
+}
+export function clearSession() {
+  localStorage.removeItem(ROLE_KEY);
+  localStorage.removeItem(TOKEN_KEY);
+}
+
+export function inr(minor: number): string {
+  return `₹${(minor / 100).toLocaleString("en-IN")}`;
+}
