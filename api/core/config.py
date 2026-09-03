@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     control_plane_url: str = ""
     control_plane_token: str = ""
 
+    # AI Runtime -> Ollama (optional; the AI reasons here but never moves money)
+    ollama_url: str = ""
+    ollama_model: str = "qwen2.5:0.5b"
+
     # Razorpay (test keys; secret never leaves the adapter boundary)
     razorpay_key_id: str = ""
     razorpay_key_secret: str = ""

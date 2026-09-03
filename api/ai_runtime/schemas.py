@@ -39,6 +39,7 @@ class AgentReply(BaseModel):
     summary: str
     catalog_count: int = 0
     actions: list[AgentAction]
+    ai_comment: str = ""
 
 
 class BuyerReport(BaseModel):

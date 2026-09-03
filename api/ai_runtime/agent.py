@@ -12,7 +12,7 @@ from ai_runtime.tools.registry import is_allowed
 
 
 async def run_agent(intent: CommerceIntent, client) -> dict:
-    catalog = await client.discover_products()  # read-only, via the control plane only
+    catalog = await _safe_catalog(client)  # read-only; degrade gracefully if unavailable
     actions = []
     for item in intent.items:
         tool = "request_authorization"  # the only allowed action here; no money moves
@@ -25,3 +25,10 @@ async def run_agent(intent: CommerceIntent, client) -> dict:
         "catalog_count": len(catalog),
         "actions": actions,
     }
+
+
+async def _safe_catalog(client) -> list:
+    try:
+        return await client.discover_products()
+    except Exception:  # noqa: BLE001 - recommendation degrades if the control plane is unreachable
+        return []

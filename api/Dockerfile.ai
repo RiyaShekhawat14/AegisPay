@@ -3,8 +3,10 @@ FROM python:3.12-slim
 WORKDIR /app
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 PIP_DEFAULT_TIMEOUT=120 PIP_DISABLE_PIP_VERSION_CHECK=1
 
-# Build context = repo root. The AI runtime is a top-level package for this image.
+# Build context = repo root. `ai_runtime` is a top-level package for this image, but it also
+# imports `api.core.config` (shared settings), so the `api` package must be present too.
 COPY api/pyproject.toml ./
+COPY api ./api
 COPY api/ai_runtime ./ai_runtime
 RUN pip install --no-cache-dir --timeout 120 .
 

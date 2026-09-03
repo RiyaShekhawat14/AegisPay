@@ -12,6 +12,7 @@ from fastapi import Depends, FastAPI
 
 from ai_runtime.agent import run_agent
 from ai_runtime.buyer import run_buyer
+from ai_runtime.llm import recommend
 from ai_runtime.schemas import AgentReply, BuyerReport, CommerceIntent, RunIn
 from ai_runtime.tools.client import ControlPlaneClient
 from api.core.config import get_settings
@@ -32,7 +33,14 @@ async def agent_run(body: RunIn, client: Client) -> AgentReply:
     intent = CommerceIntent(
         agent_id=body.agent_id, kind=body.kind, summary=body.summary, items=body.items
     )
-    return AgentReply(**await run_agent(intent, client))
+    result = await run_agent(intent, client)
+    s = get_settings()
+    ai_comment = await recommend(
+        f"As a shopping agent, recommend in one sentence: {body.summary or intent.items}",
+        base_url=s.ollama_url,
+        model=s.ollama_model,
+    )
+    return AgentReply(**result, ai_comment=ai_comment)
 
 
 @app.post("/agent/buy", response_model=BuyerReport)
