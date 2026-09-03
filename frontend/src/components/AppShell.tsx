@@ -1,22 +1,47 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { clearSession, getSession } from "@/lib/api";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
+import { clearSession, getSession } from "@/lib/api";
 
 type Role = "buyer" | "merchant";
+type NavItem = { href: string; label: string; icon: string; pill?: string };
 
-const NAV: Record<Role, { href: string; label: string; icon: string }[]> = {
+const NAV: Record<Role, { group: string; items: NavItem[] }[]> = {
   merchant: [
-    { href: "/merchant", label: "Dashboard", icon: "▦" },
-    { href: "/merchant/catalog", label: "Catalog", icon: "▪" },
-    { href: "/merchant/opportunities", label: "Opportunities", icon: "◇" },
-    { href: "/merchant/campaigns", label: "Campaigns", icon: "▣" },
+    {
+      group: "Commerce",
+      items: [
+        { href: "/merchant", label: "Dashboard", icon: "▦" },
+        { href: "/merchant/catalog", label: "Catalog", icon: "▪" },
+        { href: "/merchant/agents", label: "Agents", icon: "⚙" },
+      ],
+    },
+    {
+      group: "Growth",
+      items: [
+        { href: "/merchant/opportunities", label: "Opportunities", icon: "◇" },
+        { href: "/merchant/campaigns", label: "Campaigns", icon: "▣" },
+      ],
+    },
+    {
+      group: "Control",
+      items: [
+        { href: "/merchant/approvals", label: "Approvals", icon: "✓", pill: "3" },
+        { href: "/merchant/policies", label: "Policies", icon: "◈" },
+      ],
+    },
   ],
   buyer: [
-    { href: "/shop", label: "Find products", icon: "🔍" },
-    { href: "/shop/cart", label: "Cart", icon: "🛒" },
+    {
+      group: "Shop",
+      items: [
+        { href: "/shop", label: "Find products", icon: "🔍" },
+        { href: "/shop/cart", label: "Your cart", icon: "🛒" },
+        { href: "/shop/checkout", label: "Checkout", icon: "▸" },
+      ],
+    },
   ],
 };
 
@@ -37,38 +62,45 @@ export default function AppShell({ role, children }: { role: Role; children: Rea
     router.replace("/login");
   }
 
-  const brand = role === "merchant" ? { title: "AegisPay", sub: "MERCHANT CONSOLE" } : { title: "AegisPay", sub: "AI BUYER" };
+  const brand = role === "merchant" ? { mark: "◈", title: "AegisPay", sub: "MERCHANT CONSOLE" } : { mark: "◈", title: "AegisPay", sub: "AI BUYER" };
 
   return (
     <div className="min-h-screen bg-bg text-ink">
       <div className="flex min-h-screen">
-        <aside className="hidden w-52 shrink-0 border-r border-border bg-surface p-3 md:block">
-          <div className="mb-4 flex items-center gap-2 px-2 pt-1">
-            <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-ink text-xs text-white">◈</div>
+        <aside className="hidden w-[200px] shrink-0 border-r border-border bg-surface px-2.5 py-3.5 md:block">
+          <div className="mb-4 flex items-center gap-2 px-2 pb-4">
+            <div className="flex h-6.5 w-6.5 h-7 w-7 items-center justify-center rounded-lg bg-ink text-sm text-white">{brand.mark}</div>
             <div>
-              <div className="text-sm font-bold leading-tight">{brand.title}</div>
+              <div className="text-[13px] font-bold leading-tight">{brand.title}</div>
               <div className="text-[9px] tracking-wide text-muted">{brand.sub}</div>
             </div>
           </div>
-          <nav className="space-y-1 text-sm">
-            {NAV[role].map((item) => {
-              const active = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-2 rounded-lg px-2 py-2 transition ${
-                    active ? "bg-primary/5 font-semibold text-primary" : "text-ink/80 hover:bg-hover"
-                  }`}
-                >
-                  <span className="w-4 text-center">{item.icon}</span>
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-          <div className="mt-6 space-y-1 text-sm">
-            <button onClick={logout} className="w-full rounded-lg px-2 py-2 text-left text-muted hover:bg-hover">
+
+          {NAV[role].map((g) => (
+            <div key={g.group}>
+              <div className="px-2 pb-1 pt-2.5 text-[10px] font-semibold uppercase tracking-wide text-muted">{g.group}</div>
+              {g.items.map((item) => {
+                const active = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[12.5px] transition ${
+                      active ? "bg-primarySoft font-semibold text-primary" : "text-ink/70 hover:bg-hover"
+                    }`}
+                  >
+                    {active && <span className="absolute -left-2.5 inset-y-1.5 w-0.5 rounded bg-primary" />}
+                    <span className="w-4 text-center opacity-85">{item.icon}</span>
+                    <span className="flex-1">{item.label}</span>
+                    {item.pill && <span className="rounded-md bg-errSoft px-1.5 py-0.5 text-[10px] font-semibold text-err">{item.pill}</span>}
+                  </Link>
+                );
+              })}
+            </div>
+          ))}
+
+          <div className="mt-6 border-t border-border pt-2">
+            <button onClick={logout} className="w-full rounded-lg px-2.5 py-2 text-left text-[12.5px] text-muted hover:bg-hover">
               ↪ Log out
             </button>
           </div>
@@ -78,14 +110,14 @@ export default function AppShell({ role, children }: { role: Role; children: Rea
           <header className="flex items-center gap-3 border-b border-border bg-surface px-5 py-3">
             <div className="text-[11px] text-muted md:hidden">{brand.sub}</div>
             <div className="flex-1" />
-            <div className="hidden items-center rounded-lg bg-bg px-3 py-1.5 text-xs text-muted md:flex">
-              Search orders, products…
+            <div className="hidden w-[220px] items-center rounded-lg bg-bg px-3 py-1.5 text-xs text-muted md:flex">
+              🔍 Search orders, products…
             </div>
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-ink text-xs font-semibold text-white">
               {role === "merchant" ? "A" : "B"}
             </div>
           </header>
-          {ready ? <main className="p-5">{children}</main> : <main className="p-5" />}
+          {ready ? <main className="p-6">{children}</main> : <main className="p-6" />}
         </div>
       </div>
     </div>
