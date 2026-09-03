@@ -170,6 +170,16 @@
 - **Problem:** `Gateway.enter` signature me `authenticate` + `merchant_id`/`agent_id` alag chahiye; router ko claims pehle chahiye.
 - **Fix:** Router pehle `verify(token)` se claims nikalta hai, phir wahi token `_gateway.enter` ko pass karta hai (jo apne authenticate se subject jaght jaata hai). Redundant verify acceptable — Gateway unchanged reuse kiya.
 
+## 33. Phase 14: reconciliation worker me `Tenant` model missing
+- **Error:** Worker `from api.db.models import Tenant` → `ImportError: cannot import name 'Tenant'`.
+- **Problem:** ORM me `tenants` table ka koi model nahi tha (worker ko sari tenants enumerate karni hain; tenants table RLS nahi hota, isliye wo cross-tenant enumeration ka root hai).
+- **Fix:** `models.py` me `Tenant` model add kiya (id, slug, name, currency, status). TimestampMixin ke baad define kiya (pehle NameError tha).
+
+## 34. Phase 15 (red-team): FAKta ke liye webhook verification default weak (no secret)
+- **Error/Note:** Bina `RAZORPAY_WEBHOOK_SECRET` configured, webhook router `get_provider()` (mock) par fallback karta hai jo har signature accept karta hai.
+- **Problem:** Webhooks untrusted hain; prod me secret required hai. Dev/test me mock fallback ko treat karna theek hai, par prod me ye security gap hai.
+- **Fix:** Red-team suite me isko document kiya. Production must set `RAZORPAY_WEBHOOK_SECRET` (router phir HMAC verify karta hai). No test gap — red-team suite attacks safely blocked.
+
 ---
 
 ## Naya error yahan add karo (template)
