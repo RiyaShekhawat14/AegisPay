@@ -1,14 +1,20 @@
 """Controllers (v1). Routers parse, authorize, call a service, return a DTO."""
 
 from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from sqlalchemy import text
 
+from api.core.metrics import prometheus_text
 from api.db.session import engine
 from api.dependencies.auth import CurrentPrincipal
 from api.schemas.common import PrincipalOut
 
 router = APIRouter(prefix="/v1", tags=["v1"])
+
+
+@router.get("/metrics", response_class=PlainTextResponse, tags=["ops"])
+async def metrics() -> PlainTextResponse:
+    return PlainTextResponse(prometheus_text())
 
 
 @router.get("/health", tags=["ops"])

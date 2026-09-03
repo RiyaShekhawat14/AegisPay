@@ -15,6 +15,7 @@ from api.core.observability import (
 from api.core.observability import (
     instrument as instrument_observability,
 )
+from api.middleware.metrics_middleware import MetricsMiddleware
 from api.middleware.middleware import (
     RateLimitMiddleware,
     RequestIdMiddleware,
@@ -29,6 +30,7 @@ app = FastAPI(title="AegisPay Control Plane", version="0.1.0")
 app.add_middleware(RequestIdMiddleware)
 app.add_middleware(TenantContextMiddleware)
 app.add_middleware(RateLimitMiddleware)
+app.add_middleware(MetricsMiddleware)
 instrument_observability(app)
 app.include_router(router)
 register_error_handlers(app)

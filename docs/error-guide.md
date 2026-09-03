@@ -185,6 +185,11 @@
 - **Problem:** UI E2E ke liye live server + browser chahiye, jo abhi set-up nahi hai. API-level full-chain proof isi phase me milti hai.
 - **Fix:** API-level E2E (`test_end_to_end.py`) — full Control Plane chain (auth→catalog→cart→checkout→authz→payment→audit→passport) + reconciliation — CI integration job me chalti hai. Playwright UI smoke ko compose-orchestrated stack ke saath later follow-up.
 
+## 36. Phase 17: metrics middleware `_grouped` unused + route-template grouping
+- **Error/Note:** Metrics middleware me `_grouped` dict add kiya tha jo use nahi hua (ruff F541/over-engineering); `/metrics` request ko un-grouped raw URL par count karta tha.
+- **Problem:** Prometheus counter ko route-template (path) se group karna chahiye, query-string ke saath nahi — warna cardinality badh jaati hai.
+- **Fix:** `_grouped` hata diya; path `request.scope["route"].path` (route template) se liya. Ab `/v1/health` sab requests ek label me count hoti hain.
+
 ---
 
 ## Naya error yahan add karo (template)
