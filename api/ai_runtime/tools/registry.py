@@ -6,7 +6,13 @@ never capture, refund, or execute a payment. This belongs to the control plane o
 
 from __future__ import annotations
 
-ALLOWED_TOOLS = {"discover_products", "create_cart", "request_authorization"}
+ALLOWED_TOOLS = {
+    "discover_products",
+    "create_cart",
+    "add_item",
+    "checkout",
+    "request_authorization",
+}
 
 # Money-moving actions the AI must NEVER have, no matter what.
 FORBIDDEN_TOOLS = {"execute_payment", "capture", "refund", "policy.write"}

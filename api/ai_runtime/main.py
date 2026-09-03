@@ -11,7 +11,8 @@ from typing import Annotated
 from fastapi import Depends, FastAPI
 
 from ai_runtime.agent import run_agent
-from ai_runtime.schemas import AgentReply, CommerceIntent, RunIn
+from ai_runtime.buyer import run_buyer
+from ai_runtime.schemas import AgentReply, BuyerReport, CommerceIntent, RunIn
 from ai_runtime.tools.client import ControlPlaneClient
 from api.core.config import get_settings
 
@@ -32,3 +33,13 @@ async def agent_run(body: RunIn, client: Client) -> AgentReply:
         agent_id=body.agent_id, kind=body.kind, summary=body.summary, items=body.items
     )
     return AgentReply(**await run_agent(intent, client))
+
+
+@app.post("/agent/buy", response_model=BuyerReport)
+async def agent_buy(body: RunIn, client: Client) -> BuyerReport:
+    intent = CommerceIntent(
+        agent_id=body.agent_id, kind="buy", summary=body.summary, items=body.items
+    )
+    result = await run_buyer(intent, client)
+    result.pop("_catalog_count", None)
+    return BuyerReport(**result)

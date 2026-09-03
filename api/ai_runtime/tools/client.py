@@ -27,6 +27,18 @@ class ControlPlaneClient:
         r.raise_for_status()
         return r.json()
 
+    async def add_item(self, *, cart_id: str, product_id: str, quantity: int) -> dict:
+        r = await self._client.post(
+            f"/v1/carts/{cart_id}/items", json={"product_id": product_id, "quantity": quantity}
+        )
+        r.raise_for_status()
+        return r.json()
+
+    async def checkout(self, *, cart_id: str) -> dict:
+        r = await self._client.post(f"/v1/carts/{cart_id}/checkout")
+        r.raise_for_status()
+        return r.json()
+
     async def request_authorization(self, *, cart_id: str) -> dict:
         r = await self._client.post("/v1/authorizations", json={"cart_id": cart_id})
         r.raise_for_status()
