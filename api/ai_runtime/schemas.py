@@ -39,3 +39,10 @@ class AgentReply(BaseModel):
     summary: str
     catalog_count: int = 0
     actions: list[AgentAction]
+
+
+class BuyerReport(BaseModel):
+    order_id: str | None
+    authorization_id: str | None
+    authorization_status: str | None
+    items: list[IntentItem]

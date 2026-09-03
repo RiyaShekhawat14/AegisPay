@@ -160,6 +160,11 @@
 - **Problem:** `agent_id=uuid.UUID(principal.subject)` — token ka `sub` ("agent-1") ek valid UUID nahi hai.
 - **Fix:** `agent_id` ko route me request body se lete hain (`OpportunityGenerateIn.agent_id`), subject se derive nahi karte.
 
+## 31. Phase 11: buyer tools `add_item`/`checkout` allowlist me nahi the
+- **Error:** Buyer flow me `add_item`/`checkout` use karna tha, par `tools.registry.ALLOWED_TOOLS` me sirf 3 the (discover/create_cart/request_authorization) → buyer ke tools allow nahi honge.
+- **Problem:** SELL buyer ko cart/order setup karna hai (add item, checkout). Ye **money moves nahi** hain (sirf cart/order setup), par allowlist me add nahi the — guardrail test fail hota.
+- **Fix:** `ALLOWED_TOOLS` me `add_item` + `checkout` add kiya (cart/order setup). `capture`/`refund`/`execute_payment` ab bhi FORBIDDEN.
+
 ---
 
 ## Naya error yahan add karo (template)

@@ -30,9 +30,17 @@ class FakeClient:
         self.calls.append("create_cart")
         return {"id": "c1"}
 
+    async def add_item(self, *, cart_id: str, product_id: str, quantity: int) -> dict:
+        self.calls.append("add_item")
+        return {"id": cart_id}
+
+    async def checkout(self, *, cart_id: str) -> dict:
+        self.calls.append("checkout")
+        return {"id": "o1"}
+
     async def request_authorization(self, *, cart_id: str) -> dict:
         self.calls.append("request_authorization")
-        return {"id": "a1"}
+        return {"id": "a1", "status": "PENDING_APPROVAL"}
 
 
 def test_tool_allowlist_has_no_money_tools():
@@ -107,6 +115,60 @@ async def test_agent_run_validates_input():
                     "kind": "buy",
                     "items": [{"product_id": "p1", "quantity": 0}],
                 },
+            )
+        assert r.status_code == 422
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_buyer_flow_requests_authorization_not_payment():
+    from ai_runtime.buyer import run_buyer
+
+    intent = CommerceIntent(
+        agent_id="a1",
+        kind="buy",
+        summary="buy shoes",
+        items=[IntentItem(product_id="p1", quantity=2)],
+    )
+    client = FakeClient()
+    report = await run_buyer(intent, client)
+    assert report["order_id"] == "o1"
+    assert report["authorization_id"] == "a1"
+    assert report["authorization_status"] == "PENDING_APPROVAL"
+    # The buyer set up the purchase and requested authorization — never paid/captured/refunded.
+    assert "capture" not in client.calls
+    assert "refund" not in client.calls
+    assert "execute_payment" not in client.calls
+    # Every tool used is in the allowlist.
+    assert all(is_allowed(t) for t in client.calls)
+
+
+@pytest.mark.asyncio
+async def test_buyer_endpoint_returns_report_with_fake_client():
+    app.dependency_overrides[get_client] = lambda: FakeClient()
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+            r = await c.post(
+                "/agent/buy",
+                json={"agent_id": "a1", "items": [{"product_id": "p1", "quantity": 2}]},
+            )
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["order_id"] == "o1"
+        assert body["authorization_status"] == "PENDING_APPROVAL"
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_buyer_endpoint_validates_input():
+    app.dependency_overrides[get_client] = lambda: FakeClient()
+    try:
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
+            r = await c.post(
+                "/agent/buy",
+                json={"agent_id": "a1", "items": [{"product_id": "p1", "quantity": 0}]},
             )
         assert r.status_code == 422
     finally:
