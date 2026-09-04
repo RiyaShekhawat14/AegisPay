@@ -84,7 +84,7 @@ export function PageHeader({ title, crumb, action }: { title: string; crumb?: st
 // ---- Pipeline strip (architecture: control > ai) ----
 export function Pipeline({ steps, active = 0 }: { steps: string[]; active?: number }) {
   return (
-    <div className="mb-4 flex items-center overflow-hidden rounded-lg border border-border bg-surface px-3 py-2">
+    <div className="mb-4 flex items-center overflow-x-auto rounded-lg border border-border bg-surface px-3 py-2">
       {steps.map((s, i) => (
         <div key={s} className="flex items-center">
           <div className={`flex items-center gap-1.5 whitespace-nowrap text-[11px] ${i === active ? "font-semibold text-ink" : "text-muted"}`}>

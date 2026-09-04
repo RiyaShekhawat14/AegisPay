@@ -30,6 +30,8 @@ const NAV: Record<Role, { group: string; items: NavItem[] }[]> = {
       items: [
         { href: "/merchant/approvals", label: "Approvals", icon: "✓", pill: "3" },
         { href: "/merchant/policies", label: "Policies", icon: "◈" },
+        { href: "/merchant/analytics", label: "Analytics", icon: "◫" },
+        { href: "/merchant/audit", label: "Audit", icon: "◷" },
       ],
     },
   ],
@@ -38,8 +40,11 @@ const NAV: Record<Role, { group: string; items: NavItem[] }[]> = {
       group: "Shop",
       items: [
         { href: "/shop", label: "Find products", icon: "🔍" },
+        { href: "/shop/intent", label: "How it works", icon: "◈" },
         { href: "/shop/cart", label: "Your cart", icon: "🛒" },
         { href: "/shop/checkout", label: "Checkout", icon: "▸" },
+        { href: "/shop/approval", label: "Approval", icon: "✓" },
+        { href: "/shop/audit-timeline", label: "Audit trail", icon: "◷" },
       ],
     },
   ],

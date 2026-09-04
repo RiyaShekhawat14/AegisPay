@@ -20,11 +20,15 @@ export default function MerchantDashboard() {
 
   return (
     <AppShell role="merchant">
+      <div className="mb-5 overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-surface to-primarySoft p-6">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">AegisPay · Merchant Console</div>
+        <h1 className="mt-2 text-2xl font-bold tracking-tight">Grow the merchant — control first.</h1>
+        <p className="mt-1 max-w-xl text-sm text-muted">
+          One workspace to let AI help revenue, with a deterministic control plane between the AI and money. Red only for actions and active state.
+        </p>
+      </div>
+
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight">Overview</h1>
-          <p className="text-xs text-muted">ABC Store · last 30 days</p>
-        </div>
         <div className="ml-auto flex items-center gap-2 text-xs text-muted">
           <span className="h-1.5 w-1.5 rounded-full bg-ok" /> control plane operational
         </div>

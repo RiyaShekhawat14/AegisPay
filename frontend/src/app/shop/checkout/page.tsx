@@ -1,6 +1,7 @@
 "use client";
 import AppShell from "@/components/AppShell";
 import { Badge, Button, Panel } from "@/components/ui";
+import { Pipeline } from "@/components/ui";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { checkout, getProducts, getSession, inr, Product, requestAuthorization } from "@/lib/api";
@@ -38,6 +39,7 @@ export default function CheckoutPage() {
   return (
     <AppShell role="buyer">
       <div className="mx-auto max-w-md">
+        <Pipeline steps={["Propose", "Validate", "Policy", "Risk", "Approve", "Razorpay", "Verify", "Audit"]} active={4} />
         <div className="mb-4 flex items-center gap-2 border-b border-border pb-3">
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-ink text-sm text-white">◈</div>
           <div><b className="text-sm">One last confirmation</b><div className="text-[11px] text-muted">you stay in control</div></div>
