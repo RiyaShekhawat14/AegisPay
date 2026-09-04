@@ -33,10 +33,6 @@ export default function Home() {
           <div className="text-sm font-bold leading-tight">AegisPay</div>
           <div className="text-[9px] tracking-wide text-muted">THE TRUST &amp; GROWTH LAYER</div>
         </div>
-        <div className="ml-auto flex items-center gap-2 text-xs">
-          <a href="http://localhost:8000/docs" target="_blank" rel="noreferrer" className="rounded-lg px-3 py-1.5 text-muted hover:bg-hover">API docs</a>
-          <a href="http://localhost:8001/docs" target="_blank" rel="noreferrer" className="rounded-lg px-3 py-1.5 text-muted hover:bg-hover">AI runtime</a>
-        </div>
       </header>
 
       <main className="relative z-10 mx-auto flex max-w-5xl flex-col items-center px-6 pb-20 pt-10 text-center">
