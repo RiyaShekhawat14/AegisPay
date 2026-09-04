@@ -1,16 +1,17 @@
 "use client";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { saveSession } from "@/lib/api";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-function LoginForm() {
+export default function LoginPage() {
   const router = useRouter();
-  const params = useSearchParams();
-  const [role, setRole] = useState<"buyer" | "merchant">((params.get("role") as "buyer" | "merchant") || "buyer");
-  const [token, setToken] = useState("");
+  const [mode, setMode] = useState<"login" | "signup">("login");
+  const [role, setRole] = useState<"buyer" | "merchant">("buyer");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [merchantName, setMerchantName] = useState("");
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -18,24 +19,29 @@ function LoginForm() {
     e.preventDefault();
     setBusy(true);
     setMsg("");
-    // JWT authentication: verify the token against the control plane (GET /v1/me). If it
-    // works, the session is real; if no token is provided we allow a demo session.
-    if (token.trim()) {
-      try {
-        const res = await fetch(`${BASE}/v1/me`, { headers: { Authorization: `Bearer ${token.trim()}` } });
-        if (!res.ok) {
-          setMsg(res.status === 401 ? "Invalid or expired token — try again or leave blank for demo." : "Could not reach the control plane.");
-          setBusy(false);
-          return;
-        }
-      } catch {
-        setMsg("Could not reach the control plane at " + BASE);
+    try {
+      const payload = mode === "signup"
+        ? { email, password, role: role === "merchant" ? "admin" : "member", merchant_name: merchantName || (role === "merchant" ? "My Store" : "Buyer") }
+        : { email, password };
+      const res = await fetch(`${BASE}/v1/auth/${mode}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setMsg(data?.detail ?? data?.message ?? `Request failed: ${res.status}`);
         setBusy(false);
         return;
       }
+      // Decide the console from the verified role, or the chosen role.
+      const targetRole = data.role === "admin" || role === "merchant" ? "merchant" : "buyer";
+      saveSession(targetRole, data.token);
+      router.push(targetRole === "merchant" ? "/merchant" : "/shop");
+    } catch (err) {
+      setMsg("Could not reach the control plane at " + BASE);
+      setBusy(false);
     }
-    saveSession(role, token.trim());
-    router.push(role === "merchant" ? "/merchant" : "/shop");
   }
 
   return (
@@ -50,6 +56,7 @@ function LoginForm() {
         </div>
 
         <form onSubmit={submit} className="rounded-2xl border border-border bg-surface p-6 shadow-card">
+          {/* role */}
           <div className="grid grid-cols-2 gap-2">
             <button type="button" onClick={() => setRole("buyer")} className={`rounded-lg border p-3 text-left transition ${role === "buyer" ? "border-primary bg-primarySoft" : "border-border hover:bg-hover"}`}>
               <div className="text-sm font-semibold">Buyer</div>
@@ -64,32 +71,36 @@ function LoginForm() {
           <div className="mt-4 space-y-3">
             <label className="block">
               <span className="text-xs font-semibold">Email</span>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className="aegis-input mt-1 w-full px-3 py-2" />
+              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className="aegis-input mt-1 w-full px-3 py-2" />
             </label>
             <label className="block">
-              <span className="text-xs font-semibold">Access token (JWT)</span>
-              <input type="password" value={token} onChange={(e) => setToken(e.target.value)} placeholder="Paste your bearer token for the control plane" className="aegis-input mt-1 w-full px-3 py-2" />
+              <span className="text-xs font-semibold">Password</span>
+              <input type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="aegis-input mt-1 w-full px-3 py-2" />
             </label>
+            {mode === "signup" && role === "merchant" && (
+              <label className="block">
+                <span className="text-xs font-semibold">Store name</span>
+                <input value={merchantName} onChange={(e) => setMerchantName(e.target.value)} placeholder="ABC Store" className="aegis-input mt-1 w-full px-3 py-2" />
+              </label>
+            )}
           </div>
 
           {msg && <p className="mt-3 text-xs text-err">{msg}</p>}
 
           <button type="submit" disabled={busy} className="mt-5 w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-55">
-            {busy ? "Verifying…" : `Login as ${role === "merchant" ? "Merchant" : "Buyer"}`}
+            {busy ? "Working…" : mode === "login" ? `Login as ${role === "merchant" ? "Merchant" : "Buyer"}` : `Create ${role === "merchant" ? "Merchant" : "Buyer"} account`}
           </button>
-          <p className="mt-3 text-center text-[11px] text-muted">
-            Leave the token blank for a demo session. The AI can reason and recommend — only the AegisPay control plane authorizes and executes payments.
-          </p>
+
+          <div className="mt-4 flex items-center justify-center gap-2 text-xs text-muted">
+            <span>{mode === "login" ? "New here?" : "Already have an account?"}</span>
+            <button type="button" onClick={() => setMode(mode === "login" ? "signup" : "login")} className="font-semibold text-primary hover:underline">
+              {mode === "login" ? "Sign up" : "Login"}
+            </button>
+          </div>
+
+          <p className="mt-3 text-center text-[11px] text-muted">The AI can reason and recommend — only the AegisPay control plane authorizes and executes payments.</p>
         </form>
       </div>
     </div>
-  );
-}
-
-export default function LoginPage() {
-  return (
-    <Suspense fallback={null}>
-      <LoginForm />
-    </Suspense>
   );
 }

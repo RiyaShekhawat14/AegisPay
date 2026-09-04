@@ -19,6 +19,8 @@ create table users (
   id uuid primary key default gen_random_uuid(),
   email text not null unique,
   password_hash text not null,
+  tenant_id uuid references tenants(id),
+  role text not null default 'member',
   status text not null default 'ACTIVE',
   created_at timestamptz not null default now()
 );

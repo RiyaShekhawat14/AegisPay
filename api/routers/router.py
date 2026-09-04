@@ -3,6 +3,7 @@
 from fastapi import APIRouter
 
 from api.routers.audit import router as audit_router
+from api.routers.auth import router as auth_router
 from api.routers.authorizations import router as authorizations_router
 from api.routers.carts import router as carts_router
 from api.routers.grow import router as grow_router
@@ -17,6 +18,7 @@ from api.routers.webhooks import router as webhooks_router
 
 router = APIRouter()
 router.include_router(health_router)
+router.include_router(auth_router)
 router.include_router(products_router)
 router.include_router(carts_router)
 router.include_router(orders_router)
