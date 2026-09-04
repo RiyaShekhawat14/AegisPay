@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { clearSession, getSession } from "@/lib/api";
+import { clearSession, controlPlaneUp, getSession } from "@/lib/api";
 
 type Role = "buyer" | "merchant";
 type NavItem = { href: string; label: string; icon: string; pill?: string };
@@ -54,6 +54,7 @@ export default function AppShell({ role, children }: { role: Role; children: Rea
   const pathname = usePathname();
   const router = useRouter();
   const [ready, setReady] = useState(false);
+  const [offline, setOffline] = useState(false);
 
   useEffect(() => {
     const s = getSession();
@@ -61,6 +62,15 @@ export default function AppShell({ role, children }: { role: Role; children: Rea
     else setReady(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [role]);
+
+  useEffect(() => {
+    let alive = true;
+    controlPlaneUp().then((up) => { if (alive) setOffline(!up); });
+    const id = setInterval(() => {
+      controlPlaneUp().then((up) => { if (alive) setOffline(!up); });
+    }, 15000);
+    return () => { alive = false; clearInterval(id); };
+  }, []);
 
   function logout() {
     clearSession();
@@ -112,6 +122,11 @@ export default function AppShell({ role, children }: { role: Role; children: Rea
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
+          {offline && (
+            <div className="flex items-center gap-2 border-b border-warnSoft bg-warnSoft px-5 py-2 text-xs font-semibold text-warn">
+              <span className="h-1.5 w-1.5 rounded-full bg-warn" /> Control plane unreachable — showing demo data.
+            </div>
+          )}
           <header className="flex items-center gap-3 border-b border-border bg-surface px-5 py-3">
             <div className="text-[11px] text-muted md:hidden">{brand.sub}</div>
             <div className="flex-1" />

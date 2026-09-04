@@ -1,5 +1,6 @@
 // Typed API client for the AegisPay control plane.
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+const TIMEOUT_MS = 5000;
 
 type Role = "buyer" | "merchant";
 
@@ -44,19 +45,36 @@ export type Order = { id: string; cart_id: string; status: string; total_minor: 
 export type Authorization = { id: string; cart_id: string; status: string; amount_minor: number; currency: string };
 
 export async function api<T>(path: string, init?: RequestInit & { token?: string }): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(init?.token ? { Authorization: `Bearer ${init.token}` } : {}),
-      ...(init?.headers ?? {}),
-    },
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body?.message ?? body?.detail ?? `Request failed: ${res.status}`);
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+  try {
+    const res = await fetch(`${BASE}${path}`, {
+      ...init,
+      signal: ctrl.signal,
+      headers: {
+        "Content-Type": "application/json",
+        ...(init?.token ? { Authorization: `Bearer ${init.token}` } : {}),
+        ...(init?.headers ?? {}),
+      },
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body?.message ?? body?.detail ?? `Request failed: ${res.status}`);
+    }
+    return res.json() as Promise<T>;
+  } finally {
+    clearTimeout(timer);
   }
-  return res.json() as Promise<T>;
+}
+
+// Graceful degradation: true only when the control plane is actually reachable.
+export async function controlPlaneUp(): Promise<boolean> {
+  try {
+    const r = await api<{ status: string }>("/v1/health");
+    return r.status === "ok";
+  } catch {
+    return false;
+  }
 }
 
 export const getProducts = (token?: string) => api<Product[]>("/v1/products", { token });
