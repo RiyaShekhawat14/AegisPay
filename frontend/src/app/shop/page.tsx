@@ -42,6 +42,14 @@ export default function ShopPage() {
   return (
     <AppShell role="buyer">
       <div className="mx-auto max-w-2xl">
+        <div className="mb-5 overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-surface to-infoSoft p-6">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-info">AegisPay · AI Buyer Checkout</div>
+          <h1 className="mt-2 text-2xl font-bold tracking-tight">Sell to AI buyers — a real, safe checkout.</h1>
+          <p className="mt-1 max-w-xl text-sm text-muted">
+            A trustworthy checkout where an AI helps you buy, but AegisPay validates, authorizes and verifies. Red is reserved for the single action that moves money.
+          </p>
+        </div>
+
         <div className="mb-4 flex items-center gap-2 border-b border-border pb-3">
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-ink text-sm text-white">◈</div>
           <div><b className="text-sm">AegisPay · ABC Store</b><div className="text-[11px] text-muted">shopping-agent v3 · <span className="text-ok">secure</span></div></div>
