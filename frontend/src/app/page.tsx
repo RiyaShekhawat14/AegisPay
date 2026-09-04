@@ -1,43 +1,30 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { saveSession } from "@/lib/api";
 
 const ROLES = [
   {
-    value: "merchant" as const,
     mark: "◈",
     title: "Merchant / Admin",
     sub: "GROW · Merchant Console",
     desc: "Manage catalog, launch capped campaigns, approve high-risk actions and audit every step.",
-    points: ["Grow revenue with AI", "Budget-capped campaigns", "Approvals & audit"],
     accent: "from-primary/15 to-primarySoft",
-    btn: "bg-primary text-white",
+    feature: "bg-primary/90 text-white",
   },
   {
-    value: "buyer" as const,
     mark: "🛒",
-    title: "AI Buyer",
+    title: "Buyer",
     sub: "SELL · AI Buyer Checkout",
-    desc: "Let an AI help you shop — discover products, build a cart, authorize and pay in test mode.",
-    points: ["Find the best match", "Server-owned prices", "Safe, gated checkout"],
+    desc: "Shop in a chat that helps you discover products, build a cart, authorize and pay — safely.",
     accent: "from-info/10 to-infoSoft",
-    btn: "bg-ink text-white",
+    feature: "bg-ink",
   },
 ];
 
 export default function Home() {
   const router = useRouter();
-  const [token, setToken] = useState("");
-
-  function enter(role: "merchant" | "buyer") {
-    saveSession(role, token.trim());
-    router.push(role === "merchant" ? "/merchant" : "/shop");
-  }
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-bg text-ink">
-      {/* ambient gradient */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(211,47,91,0.08),_transparent_55%),radial-gradient(ellipse_at_bottom_right,_rgba(37,99,235,0.06),_transparent_55%)]" />
 
       <header className="relative z-10 mx-auto flex max-w-6xl items-center gap-2 px-6 py-5">
@@ -52,7 +39,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="relative z-10 mx-auto flex max-w-5xl flex-col items-center px-6 pb-20 pt-8 text-center">
+      <main className="relative z-10 mx-auto flex max-w-5xl flex-col items-center px-6 pb-20 pt-10 text-center">
         <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-[10px] font-semibold tracking-wide text-muted">
           <span className="h-1.5 w-1.5 rounded-full bg-ok" /> control plane operational
         </div>
@@ -67,8 +54,17 @@ export default function Home() {
           (policy → risk → authorization → payment) between the AI and money.
         </p>
 
+        {/* single login/signup entry */}
+        <button
+          onClick={() => router.push("/login")}
+          className="mt-8 inline-flex items-center gap-2 rounded-xl bg-primary px-8 py-3 text-base font-semibold text-white shadow-pop transition hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        >
+          Login / Sign up →
+        </button>
+        <p className="mt-2 text-xs text-muted">One account — enter as Merchant or Buyer.</p>
+
         {/* pipeline strip */}
-        <div className="mt-8 flex flex-wrap items-center justify-center gap-1 text-[11px] text-muted">
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-1 text-[11px] text-muted">
           {["AI proposes", "Validates", "Policy", "Risk", "Approve", "Pay", "Verify", "Audit"].map((s, i, arr) => (
             <span key={s} className="flex items-center">
               <span className="flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-1 font-semibold">{s}</span>
@@ -77,34 +73,14 @@ export default function Home() {
           ))}
         </div>
 
-        {/* role cards */}
+        {/* role summary (informational, not the entry) */}
         <div className="mt-10 grid w-full gap-5 md:grid-cols-2">
           {ROLES.map((r) => (
-            <div
-              key={r.value}
-              className={`group flex flex-col rounded-2xl border border-border bg-surface p-6 text-left transition hover:-translate-y-1 hover:shadow-[0_20px_60px_-15px_rgba(211,47,91,0.25)]`}
-            >
+            <div key={r.title} className="flex flex-col rounded-2xl border border-border bg-surface p-6 text-left transition">
               <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br text-xl ${r.accent}`}>{r.mark}</div>
               <div className="text-[10px] font-semibold uppercase tracking-wide text-primary">{r.sub}</div>
               <div className="mt-1 text-lg font-bold">{r.title}</div>
               <p className="mt-2 text-sm text-muted">{r.desc}</p>
-              <ul className="mt-4 space-y-1.5 text-xs text-muted">
-                {r.points.map((p) => (
-                  <li key={p} className="flex items-center gap-2"><span className="text-ok">✓</span>{p}</li>
-                ))}
-              </ul>
-              <div className="mt-5 flex items-center gap-2">
-                <input
-                  type="password"
-                  value={token}
-                  onChange={(e) => setToken(e.target.value)}
-                  placeholder="Access token (optional)"
-                  className="flex-1 rounded-lg border border-border bg-bg px-3 py-2 text-xs outline-none focus:border-primary"
-                />
-                <button onClick={() => enter(r.value)} className={`rounded-lg px-4 py-2 text-sm font-semibold transition group-hover:brightness-95 ${r.btn}`}>
-                  Enter {r.title.split(" ")[0]} →
-                </button>
-              </div>
             </div>
           ))}
         </div>
