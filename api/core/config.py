@@ -11,6 +11,10 @@ class Settings(BaseSettings):
     app_env: str = "local"
     log_level: str = "info"
 
+    # Comma-separated browser origins allowed to call this API (CORS). Auth/RLS still gate
+    # identity + tenant; CORS only permits cross-origin browser requests.
+    frontend_origins: str = ""
+
     # Database (control plane only — never given to the AI runtime)
     database_url: str = "postgresql+asyncpg://aegispay_app:aegispay@localhost:5432/aegispay"
     database_migration_url: str = ""
