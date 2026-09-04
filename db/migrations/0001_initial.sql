@@ -5,7 +5,7 @@
 create extension if not exists pgcrypto;
 
 -- ---- identity & tenants ----
-create table tenants (
+create table if not exists tenants (
   id uuid primary key default gen_random_uuid(),
   slug text not null unique,
   name text not null,
@@ -15,7 +15,7 @@ create table tenants (
   updated_at timestamptz not null default now()
 );
 
-create table users (
+create table if not exists users (
   id uuid primary key default gen_random_uuid(),
   email text not null unique,
   password_hash text not null,
@@ -25,7 +25,7 @@ create table users (
   created_at timestamptz not null default now()
 );
 
-create table tenant_users (
+create table if not exists tenant_users (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id),
   user_id uuid not null references users(id),
@@ -34,7 +34,7 @@ create table tenant_users (
   unique (tenant_id, user_id)
 );
 
-create table agents (
+create table if not exists agents (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id),
   owner_user uuid references users(id),
@@ -50,7 +50,7 @@ create table agents (
   updated_at timestamptz not null default now()
 );
 
-create table agent_sessions (
+create table if not exists agent_sessions (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id),
   agent_id uuid not null references agents(id),
@@ -61,7 +61,7 @@ create table agent_sessions (
 );
 
 -- ---- commerce (SELL) ----
-create table products (
+create table if not exists products (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id),
   sku text not null,
@@ -77,7 +77,7 @@ create table products (
   unique (tenant_id, sku)
 );
 
-create table carts (
+create table if not exists carts (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id),
   agent_id uuid not null references agents(id),
@@ -91,7 +91,7 @@ create table carts (
   updated_at timestamptz not null default now()
 );
 
-create table cart_items (
+create table if not exists cart_items (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id),
   cart_id uuid not null references carts(id),
@@ -102,7 +102,7 @@ create table cart_items (
   created_at timestamptz not null default now()
 );
 
-create table inventory_reservations (
+create table if not exists inventory_reservations (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id),
   product_id uuid not null references products(id),
@@ -113,7 +113,7 @@ create table inventory_reservations (
   created_at timestamptz not null default now()
 );
 
-create table orders (
+create table if not exists orders (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id),
   cart_id uuid not null references carts(id),
@@ -130,7 +130,7 @@ create table orders (
   updated_at timestamptz not null default now()
 );
 
-create table order_items (
+create table if not exists order_items (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id),
   order_id uuid not null references orders(id),
@@ -143,7 +143,7 @@ create table order_items (
 );
 
 -- ---- control & safety ----
-create table policies (
+create table if not exists policies (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id),
   name text not null,
@@ -155,7 +155,7 @@ create table policies (
   unique (tenant_id, name, version)
 );
 
-create table authorizations (
+create table if not exists authorizations (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id),
   agent_id uuid not null references agents(id),
@@ -173,7 +173,7 @@ create table authorizations (
   created_at timestamptz not null default now()
 );
 
-create table approvals (
+create table if not exists approvals (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id),
   authorization_id uuid not null references authorizations(id),
@@ -188,7 +188,7 @@ create table approvals (
 );
 
 -- ---- payments ----
-create table payments (
+create table if not exists payments (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id),
   order_id uuid not null references orders(id),
@@ -206,7 +206,7 @@ create table payments (
   updated_at timestamptz not null default now()
 );
 
-create table refunds (
+create table if not exists refunds (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id),
   payment_id uuid not null references payments(id),
@@ -220,7 +220,7 @@ create table refunds (
   updated_at timestamptz not null default now()
 );
 
-create table webhook_events (
+create table if not exists webhook_events (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id),
   provider text not null,
@@ -235,7 +235,7 @@ create table webhook_events (
 );
 
 -- ---- growth (GROW) ----
-create table opportunities (
+create table if not exists opportunities (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id),
   agent_id uuid not null references agents(id),
@@ -248,7 +248,7 @@ create table opportunities (
   created_at timestamptz not null default now()
 );
 
-create table campaigns (
+create table if not exists campaigns (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id),
   agent_id uuid not null references agents(id),
@@ -265,7 +265,7 @@ create table campaigns (
   updated_at timestamptz not null default now()
 );
 
-create table campaign_budget_ledger (
+create table if not exists campaign_budget_ledger (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id),
   campaign_id uuid not null references campaigns(id),
@@ -276,7 +276,7 @@ create table campaign_budget_ledger (
 );
 
 -- ---- platform reliability ----
-create table idempotency_keys (
+create table if not exists idempotency_keys (
   tenant_id uuid not null,
   scope text not null,
   key text not null,
@@ -288,7 +288,7 @@ create table idempotency_keys (
   primary key (tenant_id, scope, key)
 );
 
-create table outbox_events (
+create table if not exists outbox_events (
   id uuid primary key default gen_random_uuid(),
   tenant_id uuid not null references tenants(id),
   aggregate_type text not null,
@@ -299,7 +299,7 @@ create table outbox_events (
   created_at timestamptz not null default now()
 );
 
-create table audit_events (
+create table if not exists audit_events (
   id bigserial primary key,
   tenant_id uuid not null references tenants(id),
   event_id uuid not null default gen_random_uuid(),
@@ -315,19 +315,19 @@ create table audit_events (
 );
 
 -- ---- indexes (tenant-prefixed) ----
-create index on orders (tenant_id, status);
-create index on orders (tenant_id, created_at);
-create index on payments (tenant_id, status);
-create index on payments (order_id);
-create index on refunds (tenant_id, status);
-create index on campaigns (tenant_id, status);
-create index on agents (tenant_id, status);
-create index on webhook_events (tenant_id, status);
-create index on audit_events (tenant_id, created_at);
-create index on outbox_events (published_at) where published_at is null;
-create index on cart_items (cart_id);
-create index on order_items (order_id);
-create index on inventory_reservations (product_id, status);
+create index if not exists orders_tenant_id_idx on orders (tenant_id, status);
+create index if not exists orders_tenant_id_created_at_idx on orders (tenant_id, created_at);
+create index if not exists payments_tenant_id_status_idx on payments (tenant_id, status);
+create index if not exists payments_order_id_idx on payments (order_id);
+create index if not exists refunds_tenant_id_status_idx on refunds (tenant_id, status);
+create index if not exists campaigns_tenant_id_status_idx on campaigns (tenant_id, status);
+create index if not exists agents_tenant_id_status_idx on agents (tenant_id, status);
+create index if not exists webhook_events_tenant_id_status_idx on webhook_events (tenant_id, status);
+create index if not exists audit_events_tenant_id_created_at_idx on audit_events (tenant_id, created_at);
+create index if not exists outbox_events_published_at_idx on outbox_events (published_at) where published_at is null;
+create index if not exists cart_items_cart_id_idx on cart_items (cart_id);
+create index if not exists order_items_order_id_idx on order_items (order_id);
+create index if not exists inventory_reservations_product_id_status_idx on inventory_reservations (product_id, status);
 
 -- ---- rows-level security (application role cannot bypass) ----
 create or replace function current_tenant() returns uuid
@@ -341,6 +341,7 @@ begin
     'payments','refunds','webhook_events','opportunities','campaigns','campaign_budget_ledger',
     'outbox_events'] loop
     execute format('alter table %I enable row level security', t);
+    execute format('drop policy if exists tenant_isolation on %I', t);
     execute format($p$ create policy tenant_isolation on %I
       for all using (tenant_id = current_tenant())
       with check (tenant_id = current_tenant()) $p$, t);
@@ -349,9 +350,11 @@ end $$;
 
 -- audit_events is append-only for the application role
 alter table audit_events enable row level security;
+drop policy if exists audit_isolation on audit_events;
 create policy audit_isolation on audit_events
   for select using (tenant_id = current_tenant());
 -- allow the app role to append (WITH CHECK scopes it to its tenant); update/delete stay revoked
+drop policy if exists audit_insert on audit_events;
 create policy audit_insert on audit_events
   for insert with check (tenant_id = current_tenant());
 

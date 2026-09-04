@@ -1,6 +1,7 @@
 services:
   db:
     image: postgres:16
+    restart: unless-stopped
     environment:
       POSTGRES_USER: aegispay_migration
       POSTGRES_PASSWORD: aegispay
@@ -18,6 +19,7 @@ services:
 
   db_migrate:
     image: postgres:16
+    restart: "no"
     environment:
       PGPASSWORD: aegispay
     command: ["psql", "-v", "ON_ERROR_STOP=1", "-h", "db", "-U", "aegispay_migration", "-d", "aegispay", "-f", "/migrations/0001_initial.sql"]
@@ -28,10 +30,17 @@ services:
 
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   localstack:
     image: localstack/localstack:3.5.0
+    restart: unless-stopped
     environment:
       SERVICES: sqs
       AWS_ACCESS_KEY_ID: test
@@ -42,34 +51,65 @@ services:
     build:
       context: ../..
       dockerfile: api/Dockerfile
+    restart: unless-stopped
     environment:
       APP_ENV: local
       DATABASE_URL: postgresql+asyncpg://aegispay_app:aegispay@db:5432/aegispay
       REDIS_URL: redis://redis:6379/0
       SQS_URL: http://localstack:4566/000000000000/aegispay
-    depends_on: ["db_migrate", "redis", "localstack"]
+    depends_on:
+      db_migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+      localstack:
+        condition: service_started
     ports: ["8000:8000"]
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; raise SystemExit(0 if urllib.request.urlopen('http://localhost:8000/v1/health', timeout=3).status==200 else 1)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+      start_period: 15s
 
   ai_runtime:
     build:
       context: ../..
       dockerfile: api/Dockerfile.ai
+    restart: unless-stopped
     environment:
       CONTROL_PLANE_URL: http://app:8000
       CONTROL_PLANE_TOKEN: ""
       OLLAMA_URL: http://host.docker.internal:11434
       OLLAMA_MODEL: qwen2.5:0.5b
-    depends_on: ["app"]
+    depends_on:
+      app:
+        condition: service_healthy
     ports: ["8001:8000"]
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; raise SystemExit(0 if urllib.request.urlopen('http://localhost:8000/openapi.json', timeout=3).status==200 else 1)\""]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+      start_period: 15s
 
   frontend:
     build:
       context: ../../frontend
       dockerfile: Dockerfile
+    restart: unless-stopped
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
-    depends_on: ["app"]
+    depends_on:
+      app:
+        condition: service_healthy
     ports: ["3002:3000"]
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3000/',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+      start_period: 10s
 
 volumes:
   pgdata:
