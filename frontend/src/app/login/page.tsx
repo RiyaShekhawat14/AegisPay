@@ -36,7 +36,7 @@ export default function LoginPage() {
       }
       // Decide the console from the verified role, or the chosen role.
       const targetRole = data.role === "admin" || role === "merchant" ? "merchant" : "buyer";
-      saveSession(targetRole, data.token);
+      saveSession(targetRole, data.token, data.agent_id ?? "");
       router.push(targetRole === "merchant" ? "/merchant" : "/shop");
     } catch (err) {
       setMsg("Could not reach the control plane at " + BASE);

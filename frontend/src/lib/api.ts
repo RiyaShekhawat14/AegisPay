@@ -95,21 +95,28 @@ export const checkout = (token: string, cartId: string) => api<Order>(`/v1/carts
 export const requestAuthorization = (token: string, cartId: string) =>
   api<Authorization>("/v1/authorizations", { method: "POST", token, body: JSON.stringify({ cart_id: cartId }) });
 
-// Client-side session (there is no user/password login endpoint yet; auth is token-based).
+// Client-side session (auth is token-based; login/signup issues a JWT).
 const ROLE_KEY = "aegispay.role";
 const TOKEN_KEY = "aegispay.token";
+const AGENT_KEY = "aegispay.agent";
 
-export function saveSession(role: Role, token = "") {
+export function saveSession(role: Role, token = "", agentId = "") {
   localStorage.setItem(ROLE_KEY, role);
   localStorage.setItem(TOKEN_KEY, token);
+  if (agentId) localStorage.setItem(AGENT_KEY, agentId);
 }
-export function getSession(): { role: Role | null; token: string } {
-  if (typeof window === "undefined") return { role: null, token: "" };
-  return { role: (localStorage.getItem(ROLE_KEY) as Role | null) ?? null, token: localStorage.getItem(TOKEN_KEY) ?? "" };
+export function getSession(): { role: Role | null; token: string; agentId: string } {
+  if (typeof window === "undefined") return { role: null, token: "", agentId: "" };
+  return {
+    role: (localStorage.getItem(ROLE_KEY) as Role | null) ?? null,
+    token: localStorage.getItem(TOKEN_KEY) ?? "",
+    agentId: localStorage.getItem(AGENT_KEY) ?? "",
+  };
 }
 export function clearSession() {
   localStorage.removeItem(ROLE_KEY);
   localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(AGENT_KEY);
 }
 
 export function inr(minor: number): string {
