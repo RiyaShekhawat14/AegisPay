@@ -14,7 +14,10 @@ async def test_signup_then_login_routes():
 
     email = f"u{uuid.uuid4().hex[:8]}@test.com"
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
-        r = await c.post("/v1/auth/signup", json={"email": email, "password": "secret123", "role": "member", "merchant_name": "T"})
+        r = await c.post(
+            "/v1/auth/signup",
+            json={"email": email, "password": "secret123", "role": "member", "merchant_name": "T"},
+        )
         assert r.status_code == 201, r.text
         token = r.json()["token"]
         assert token
