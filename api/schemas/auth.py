@@ -21,3 +21,4 @@ class AuthOut(BaseModel):
     token: str
     role: str
     tenant_id: str
+    agent_id: str = ""
