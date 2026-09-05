@@ -103,24 +103,32 @@ _DEMO_PRODUCTS = [
 
 
 async def seed_demo_catalog(session, tenant_id: str) -> None:
-    """Insert the demo catalog for a tenant that has few/no products (idempotent by SKU)."""
+    """Upsert the demo catalog (by SKU) so a buyer always has products with current images.
+
+    Best-effort image refresh: if a demo product exists with no image or an old placeholder
+    URL (e.g. picsum), update it to the current image. Never overwrites a merchant's own image.
+    """
     for sku, name, category, price, image_url in _DEMO_PRODUCTS:
         dup = (
             await session.execute(select(Product).where(Product.sku == sku))
         ).scalar_one_or_none()
-        if dup is not None:
-            continue
-        session.add(
-            Product(
-                id=uuid.uuid4(),
-                tenant_id=uuid.UUID(tenant_id),
-                sku=sku,
-                name=name,
-                category=category,
-                price_minor=price,
-                image_url=image_url,
+        if dup is None:
+            session.add(
+                Product(
+                    id=uuid.uuid4(),
+                    tenant_id=uuid.UUID(tenant_id),
+                    sku=sku,
+                    name=name,
+                    category=category,
+                    price_minor=price,
+                    image_url=image_url,
+                )
             )
-        )
+        elif not dup.image_url or "picsum.photos" in dup.image_url:
+            # Refresh stale demo image, keep price/category the merchant configured.
+            dup.image_url = image_url
+            dup.name = name
+            dup.category = category
 
 
 def hash_password(password: str) -> str:

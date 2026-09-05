@@ -12,7 +12,7 @@ from api.db.repositories import ProductRepo
 from api.dependencies.auth import CurrentPrincipal
 from api.dependencies.db import DbSession
 from api.schemas.commerce import ProductIn, ProductOut
-from api.services.auth import seed_demo_catalog
+from api.services.auth import _DEMO_PRODUCTS, seed_demo_catalog
 
 router = APIRouter(prefix="/v1", tags=["catalog"])
 
@@ -20,12 +20,17 @@ router = APIRouter(prefix="/v1", tags=["catalog"])
 @router.get("/products", response_model=list[ProductOut])
 async def list_products(session: DbSession, principal: CurrentPrincipal) -> list[ProductOut]:
     products = await ProductRepo(session).list()
-    # Lazy-seed: if this tenant has no catalog yet, provision the demo products so a buyer
-    # always has something to shop. Only for real tenants (skip fabricated test tenants),
-    # and only when the tenant row exists to satisfy the FK.
-    if not products:
-        exists = await session.get(Tenant, uuid.UUID(principal.tenant_id))
-        if exists is not None:
+    # Idempotent refresh (real tenants only). Two cases:
+    #  - empty catalog -> seed the demo products so a buyer always has something to shop;
+    #  - catalog contains demo-authored products -> refresh stale demo images (skip pure
+    #    custom collections like the merchant's own, whose SKUs aren't in the demo set).
+    if await session.get(Tenant, uuid.UUID(principal.tenant_id)) is not None:
+        demo_skus = {p[0] for p in _DEMO_PRODUCTS}
+        has_demo = any(p.sku in demo_skus for p in products)
+        stale_demo = has_demo and any(
+            (not p.image_url or "picsum.photos" in (p.image_url or "")) for p in products
+        )
+        if not products or stale_demo:
             await seed_demo_catalog(session, principal.tenant_id)
             await session.commit()
             products = await ProductRepo(session).list()
