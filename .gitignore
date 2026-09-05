@@ -49,6 +49,7 @@ out/
 logs/
 .DS_Store
 Thumbs.db
+Microsoft/
 
 pdf/_build_db/
 pdf/_build_dbs/

@@ -14,9 +14,6 @@ from sqlalchemy import text
 BASE = "http://localhost:8000/v1"
 AI = "http://localhost:8001"
 
-T = "88e29c17-edcc-4106-9dde-06c8b9fdf0e4"
-A = "6ccba09f-621c-46d6-a7c9-c6b85fad5f50"
-
 results = []
 
 
@@ -35,10 +32,6 @@ async def main():
     from api.services.reconciliation import reconcile_unknown
     from api.services.razorpay_mock import RazorpayMock
 
-    tok = sign({"sub": "agent-1", "type": "AGENT", "tenant_id": T, "role": "member", "exp": int(time.time()) + 3600}, "change-me")
-    h = {"Authorization": "Bearer " + tok}
-    c = httpx.AsyncClient(base_url=BASE, headers=h, timeout=30)
-
     async def _flow(price):
         pid = (await c.post("/products", json={"sku": "E2E-" + uuid.uuid4().hex[:5], "name": "Item", "price_minor": price})).json()["id"]
         cid = (await c.post("/carts", json={"agent_id": A})).json()["id"]
@@ -49,12 +42,20 @@ async def main():
 
     email = "e2e" + uuid.uuid4().hex[:6] + "@test.com"
     r = httpx.post(BASE + "/auth/signup", json={"email": email, "password": "secret123", "role": "member", "merchant_name": "E2E"})
-    ok("signup -> 201 + token", r.status_code == 201 and r.json().get("token"))
+    body = r.json()
+    T = body.get("tenant_id", "")
+    A = body.get("agent_id", "")
+    ok("signup -> 201 + token", r.status_code == 201 and body.get("token"))
+    ok("signup -> tenant + agent id", bool(T) and bool(A), f"t={T[:8]} a={A[:8]}")
     ok("login -> 200 + role", httpx.post(BASE + "/auth/login", json={"email": email, "password": "secret123"}).status_code == 200)
     ok("wrong password -> 401", httpx.post(BASE + "/auth/login", json={"email": email, "password": "nope"}).status_code == 401)
 
+    tok = sign({"sub": "agent-1", "type": "AGENT", "tenant_id": T, "role": "member", "exp": int(time.time()) + 3600}, "change-me")
+    h = {"Authorization": "Bearer " + tok}
+    c = httpx.AsyncClient(base_url=BASE, headers=h, timeout=30)
+
     products = httpx.get(BASE + "/products", headers=h).json()
-    ok("catalog has seeded products", len(products) >= 6, f"{len(products)}")
+    ok("catalog readable (empty for fresh tenant)", isinstance(products, list), f"{len(products)}")
 
     _, order, az = await _flow(5000)
     ok("low-risk authorization -> VALID", az["status"] == "VALID")

@@ -15,7 +15,7 @@ type Msg = {
 
 export default function ShopPage() {
   const [messages, setMessages] = useState<Msg[]>([
-    { from: "ai", text: "Hi, I can help you shop from ABC Store. Tell me what you need (e.g. \"show running shoes under ₹4,000\") and I’ll show you real options." },
+    { from: "ai", text: "Hi, I can help you shop. Ask to see the products currently in this store." },
   ]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -29,7 +29,7 @@ export default function ShopPage() {
     try {
       return await getProducts(token || undefined);
     } catch {
-      return DEMO;
+      return [];
     }
   }
 
@@ -52,23 +52,24 @@ export default function ShopPage() {
   async function addToCart(p: Product) {
     const cart = JSON.parse(localStorage.getItem(CART_KEY) ?? '{"cartId":"","items":{}}') as { cartId: string; items: Record<string, number> };
     const { token, agentId } = getSession();
+    if (!token || !agentId) {
+      setMessages((m) => [...m, { from: "ai", text: "Please sign in and configure an active agent before adding items to a cart." }]);
+      return;
+    }
     try {
-      if (token) {
-        let cartId = cart.cartId;
-        if (!cartId) {
-          const c = await createCart(token, agentId || "shopping-agent");
-          cartId = c.id;
-          localStorage.setItem(CART_KEY, JSON.stringify({ cartId, items: cart.items }));
-        }
-        await addCartItem(token, cartId, p.id, 1);
-        cart.items[p.id] = (cart.items[p.id] ?? 0) + 1;
+      let cartId = cart.cartId;
+      if (!cartId) {
+        const c = await createCart(token, agentId);
+        cartId = c.id;
         localStorage.setItem(CART_KEY, JSON.stringify({ cartId, items: cart.items }));
-      } else {
-        cart.items[p.id] = (cart.items[p.id] ?? 0) + 1;
-        localStorage.setItem(CART_KEY, JSON.stringify(cart));
       }
-    } catch { /* keep demo working if the control plane is down */ }
-    setMessages((m) => [...m, { from: "ai", text: `Added **${p.name}** (${inr(p.price_minor)}) to your cart.` }]);
+      await addCartItem(token, cartId, p.id, 1);
+      cart.items[p.id] = (cart.items[p.id] ?? 0) + 1;
+      localStorage.setItem(CART_KEY, JSON.stringify({ cartId, items: cart.items }));
+      setMessages((m) => [...m, { from: "ai", text: `Added **${p.name}** (${inr(p.price_minor)}) to your cart.` }]);
+    } catch {
+      setMessages((m) => [...m, { from: "ai", text: "I couldn’t add that item. Please check the control plane and try again." }]);
+    }
   }
 
   return (
@@ -77,8 +78,8 @@ export default function ShopPage() {
         <div className="flex items-center gap-2 border-b border-border pb-3">
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-ink text-sm text-white">◈</div>
           <div className="min-w-0">
-            <b className="text-sm">AegisPay · ABC Store</b>
-            <div className="text-[11px] text-muted">shopping-agent v3 · <span className="text-ok">secure</span></div>
+            <b className="text-sm">AegisPay store</b>
+            <div className="text-[11px] text-muted">secure checkout</div>
           </div>
           <Link href="/shop/cart" className="ml-auto rounded-lg border border-border bg-surface px-3 py-1.5 text-xs font-semibold transition hover:bg-hover">
             🛒 View cart →
@@ -142,10 +143,3 @@ export default function ShopPage() {
     </AppShell>
   );
 }
-
-const DEMO: Product[] = [
-  { id: "p1", sku: "RS-42", name: "Runner Pro 42", category: "shoes/running", price_minor: 349900, currency: "INR", status: "ACTIVE" },
-  { id: "p2", sku: "SR-40", name: "Street Run 40", category: "shoes/running", price_minor: 279900, currency: "INR", status: "ACTIVE" },
-  { id: "p3", sku: "SK-3", name: "Run Sock 3-pack", category: "apparel/socks", price_minor: 49900, currency: "INR", status: "ACTIVE" },
-  { id: "p4", sku: "TS-1", name: "T-Shirt Classic", category: "apparel", price_minor: 79900, currency: "INR", status: "ACTIVE" },
-];

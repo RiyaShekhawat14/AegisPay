@@ -101,7 +101,7 @@
 │   └── README.md
 ├── db/
 │   ├── migrations/0001_initial.sql
-│   ├── seeds/dev_products.sql
+│   ├── migrations/0002_password_reset.sql
 │   └── README.md
 ├── deploy/
 │   ├── compose/{docker-compose.yml, docker-compose.dev.yml, docker-compose.test.yml}

@@ -19,20 +19,12 @@ from sqlalchemy import select, text
 from api.core.config import get_settings
 from api.core.exceptions import AuthenticationError, ConflictError, ValidationError
 from api.core.jwt import sign
-from api.db.models import Agent, PasswordResetToken, Product, Tenant, User
+from api.db.models import Agent, PasswordResetToken, Tenant, User
 from api.db.session import Session, tenant_session
 
 TOKEN_TTL_MINUTES = 60
 RESET_TOKEN_BYTES = 32
 _RESET_LETTER_DIGIT = re.compile(r"(?=.*[A-Za-z])(?=.*\d)")
-
-# Seed each new tenant with a small demo store so a fresh signup is immediately shoppable.
-_DEMO_PRODUCTS = [
-    ("RS-BLK-42", "Runner Pro 42", "shoes/running", 349900),
-    ("SR-WHT-40", "Street Run 40", "shoes/running", 279900),
-    ("SK-3PK-01", "Run Sock 3-pack", "apparel/socks", 49900),
-    ("TS-CLS-01", "T-Shirt Classic", "apparel", 79900),
-]
 
 
 def hash_password(password: str) -> str:
@@ -91,19 +83,9 @@ async def signup(*, email: str, password: str, role: str, merchant_name: str) ->
             text("insert into tenant_users (id, tenant_id, user_id, role) values (:i, :t, :u, :r)"),
             {"i": uuid.uuid4(), "t": tenant_id, "u": user_id, "r": role},
         )
-        # Seed a demo agent + catalog so a fresh tenant is immediately shoppable (SELL demo).
+        # Every tenant gets a default agent so GROW (campaigns/opportunities) and SELL (carts)
+        # can run. No catalog/products are seeded — the merchant adds those via the console.
         s.add(Agent(id=agent_id, tenant_id=tenant_id, name="shopping-agent", type="SELL"))
-        for sku, name, category, price in _DEMO_PRODUCTS:
-            s.add(
-                Product(
-                    id=uuid.uuid4(),
-                    tenant_id=tenant_id,
-                    sku=sku,
-                    name=name,
-                    category=category,
-                    price_minor=price,
-                )
-            )
     user = User(id=user_id, email=email, tenant_id=tenant_id, role=role)  # token claims
     return _token(user, agent_id=str(agent_id))
 
