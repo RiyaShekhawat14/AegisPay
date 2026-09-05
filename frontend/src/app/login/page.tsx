@@ -110,8 +110,10 @@ export default function LoginPage() {
         setBusy(false);
         return;
       }
-      // Decide the console from the verified role, or the chosen role.
-      const targetRole = data.role === "admin" || role === "merchant" ? "merchant" : "buyer";
+      // The server knows the account's real role. For login, trust it (a member is a buyer;
+      // an admin is a merchant). For signup, the chosen toggle determines it.
+      const serverRole = data.role === "admin" ? "merchant" : "buyer";
+      const targetRole = mode === "signup" ? (role === "merchant" ? "merchant" : "buyer") : serverRole;
       saveSession(targetRole, data.token, data.agent_id ?? "");
       router.push(targetRole === "merchant" ? "/merchant" : "/shop");
     } catch (err) {
@@ -195,17 +197,19 @@ export default function LoginPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {/* role */}
-              <div className="grid grid-cols-2 gap-2">
-                <button type="button" onClick={() => setRole("buyer")} className={`rounded-lg border p-3 text-left transition ${role === "buyer" ? "border-primary bg-primarySoft" : "border-border hover:bg-hover"}`}>
-                  <div className="text-sm font-semibold">Buyer</div>
-                  <div className="text-[11px] text-primary">SELL · AI Buyer</div>
-                </button>
-                <button type="button" onClick={() => setRole("merchant")} className={`rounded-lg border p-3 text-left transition ${role === "merchant" ? "border-primary bg-primarySoft" : "border-border hover:bg-hover"}`}>
-                  <div className="text-sm font-semibold">Merchant</div>
-                  <div className="text-[11px] text-primary">GROW · Console</div>
-                </button>
-              </div>
+              {/* role — only relevant when creating an account */}
+              {isSignup && (
+                <div className="grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => setRole("buyer")} className={`rounded-lg border p-3 text-left transition ${role === "buyer" ? "border-primary bg-primarySoft" : "border-border hover:bg-hover"}`}>
+                    <div className="text-sm font-semibold">Buyer</div>
+                    <div className="text-[11px] text-primary">SELL · AI Buyer</div>
+                  </button>
+                  <button type="button" onClick={() => setRole("merchant")} className={`rounded-lg border p-3 text-left transition ${role === "merchant" ? "border-primary bg-primarySoft" : "border-border hover:bg-hover"}`}>
+                    <div className="text-sm font-semibold">Merchant</div>
+                    <div className="text-[11px] text-primary">GROW · Console</div>
+                  </button>
+                </div>
+              )}
 
               <label className="block">
                 <span className="text-xs font-semibold">Email</span>
@@ -250,7 +254,7 @@ export default function LoginPage() {
               {msg && <p className="text-xs text-err">{msg}</p>}
 
               <button type="submit" disabled={busy || mismatch} className="mt-2 w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-55">
-                {busy ? "Working…" : isLogin ? `Login as ${role === "merchant" ? "Merchant" : "Buyer"}` : `Create ${role === "merchant" ? "Merchant" : "Buyer"} account`}
+                {busy ? "Working…" : isLogin ? "Login" : `Create ${role === "merchant" ? "Merchant" : "Buyer"} account`}
               </button>
 
               {isLogin && (

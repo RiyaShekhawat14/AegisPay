@@ -10,12 +10,45 @@ type Msg = {
   from: "user" | "ai";
   text?: string;
   products?: Product[];
+  crossSell?: Product[];
   added?: string;
 };
 
+// Simple intent -> category keywords, plus a cross-sell suggestion (what people also buy).
+const INTENTS: { match: string[]; label: string; cross: { match: string[]; label: string } | null }[] = [
+  { match: ["shoe", "sneaker", "running", "trainer", "footwear", "jog"], label: "shoes", cross: { match: ["sock"], label: "socks" } },
+  { match: ["sock"], label: "socks", cross: null },
+  { match: ["shirt", "tee", "apparel", "cloth"], label: "clothes", cross: null },
+  { match: ["bottle", "gear"], label: "gear", cross: null },
+  { match: ["bag", "messenger"], label: "bags", cross: null },
+  { match: ["sticker"], label: "accessories", cross: null },
+];
+
+function matchCategory(q: string, p: Product): boolean {
+  const cat = `${p.category ?? ""} ${p.name}`.toLowerCase();
+  for (const it of INTENTS) {
+    if (it.match.some((k) => q.includes(k))) {
+      return it.match.some((k) => cat.includes(k));
+    }
+  }
+  return true; // no recognized intent -> show everything
+}
+
+function crossSellFor(q: string, products: Product[]): Product[] {
+  for (const it of INTENTS) {
+    if (it.cross && it.match.some((k) => q.includes(k))) {
+      return products.filter((p) => {
+        const cat = `${p.category ?? ""} ${p.name}`.toLowerCase();
+        return it.cross!.match.some((k) => cat.includes(k));
+      });
+    }
+  }
+  return [];
+}
+
 export default function ShopPage() {
   const [messages, setMessages] = useState<Msg[]>([
-    { from: "ai", text: "Hi, I can help you shop. Ask to see the products currently in this store." },
+    { from: "ai", text: "Hi! Tell me what you need — e.g. “show me shoes”. I'll pull real options and suggest useful add-ons." },
   ]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -39,13 +72,20 @@ export default function ShopPage() {
     setMessages((m) => [...m, { from: "user", text: q }]);
     setInput("");
     setBusy(true);
-    // This is the "AI is reasoning via the control plane" beat.
-    const results = await fetchProducts();
+    const all = await fetchProducts();
     setBusy(false);
+
+    const main = all.filter((p) => matchCategory(q, p));
+    const cross = crossSellFor(q, all).filter((p) => !main.some((m) => m.id === p.id));
+
+    const mainLabel = main.length ? `Found ${main.length} for your request. Tap “Add to cart” to choose.` : "I couldn't find a match — here's everything we have.";
+    const crossLabel = cross.length ? "Also, people who bought these usually add these too — want one?" : "";
+
     setMessages((m) => [...m, {
       from: "ai",
-      text: `Here’s what’s in the store${q ? ` for: “${q}”` : ""}. Prices are server-owned — the AI only shows them. Tap “Add to cart” to choose.`,
-      products: results,
+      text: `${mainLabel}${crossLabel ? ` ${crossLabel}` : ""} Prices are server-owned — the AI only shows them.`,
+      products: main,
+      crossSell: cross,
     }]);
   }
 
@@ -72,6 +112,22 @@ export default function ShopPage() {
     }
   }
 
+  function productCard(p: Product) {
+    return (
+      <div key={p.id} className="flex flex-col rounded-xl border border-border bg-surface p-2.5">
+        <div className="flex h-24 items-center justify-center overflow-hidden rounded-lg bg-hover">
+          {p.image_url ? <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" /> : <span className="text-2xl">🛍️</span>}
+        </div>
+        <div className="mt-2 text-xs font-semibold">{p.name}</div>
+        <div className="text-[10px] text-muted">{p.category ?? "general"}</div>
+        <div className="mt-1 text-sm font-bold">{inr(p.price_minor)}</div>
+        <Button className="mt-2 w-full" variant="secondary" size="sm" onClick={() => addToCart(p)}>
+          Add to cart
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <AppShell role="buyer">
       <div className="mx-auto flex h-[calc(100vh-6.5rem)] max-w-4xl flex-col">
@@ -90,27 +146,21 @@ export default function ShopPage() {
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.from === "user" ? "justify-end" : "justify-start"}`}>
               <div className={`max-w-[85%] ${m.from === "user" ? "" : "min-w-[70%]"} rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${m.from === "user" ? "rounded-br-md bg-ink text-white" : "rounded-bl-md border border-border bg-surface text-ink"}`}>
-                {m.text && m.text.includes("**") ? (
+                {m.text && (
                   <span dangerouslySetInnerHTML={{ __html: m.text.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>") }} />
-                ) : (
-                  <span>{m.text}</span>
                 )}
                 {m.products && (
                   <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-                    {m.products.map((p) => (
-                      <div key={p.id} className="flex flex-col rounded-xl border border-border bg-surface p-2.5">
-                        <div className="flex h-24 items-center justify-center overflow-hidden rounded-lg bg-hover">
-                          {p.image_url ? <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" /> : <span className="text-2xl">🛍️</span>}
-                        </div>
-                        <div className="mt-2 text-xs font-semibold">{p.name}</div>
-                        <div className="text-[10px] text-muted">{p.category ?? "general"} · {p.status}</div>
-                        <div className="mt-1 text-sm font-bold">{inr(p.price_minor)}</div>
-                        <Button className="mt-2 w-full" variant={m.added ? "primary" : "secondary"} size="sm" onClick={() => addToCart(p)}>
-                          {m.added ? "Added ✓" : "Add to cart"}
-                        </Button>
-                      </div>
-                    ))}
-                    {m.products.length === 0 && <p className="text-xs text-muted">No products yet.</p>}
+                    {m.products.map(productCard)}
+                    {m.products.length === 0 && <p className="text-xs text-muted">No products match.</p>}
+                  </div>
+                )}
+                {m.crossSell && m.crossSell.length > 0 && (
+                  <div className="mt-3 rounded-xl border border-dashed border-primary/40 bg-primarySoft/40 p-2.5">
+                    <div className="mb-2 text-[11px] font-semibold text-primary">✨ You might also want</div>
+                    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                      {m.crossSell.map(productCard)}
+                    </div>
                   </div>
                 )}
               </div>
@@ -134,7 +184,7 @@ export default function ShopPage() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && send()}
-              placeholder='Ask me to show products, e.g. "show running shoes under ₹4,000"'
+              placeholder='Ask me, e.g. "show me shoes"'
               className="flex-1 bg-transparent px-3 py-2 text-sm outline-none"
             />
             <Button variant="primary" onClick={send} disabled={busy}>Ask</Button>

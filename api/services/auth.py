@@ -29,56 +29,19 @@ _RESET_LETTER_DIGIT = re.compile(r"(?=.*[A-Za-z])(?=.*\d)")
 # Demo catalog seeded into each new tenant so a fresh buyer immediately sees products with
 # images (the merchant can replace/augment these via the console). Images are stable
 # placeholder photos keyed by SKU.
+# Demo catalog seeded into each new tenant so a fresh buyer immediately sees products with
+# images (the merchant can replace/augment these via the console). Prices are realistic INR.
 _DEMO_PRODUCTS = [
-    (
-        "RS-BLK-42",
-        "Runner Pro 42",
-        "shoes/running",
-        349900,
-        "https://picsum.photos/seed/runner42/400/300",
-    ),
-    (
-        "SR-WHT-40",
-        "Street Run 40",
-        "shoes/running",
-        279900,
-        "https://picsum.photos/seed/street40/400/300",
-    ),
-    (
-        "SK-3PK-01",
-        "Run Sock 3-pack",
-        "apparel/socks",
-        49900,
-        "https://picsum.photos/seed/socks3pk/400/300",
-    ),
-    (
-        "TS-CLS-01",
-        "T-Shirt Classic",
-        "apparel",
-        79900,
-        "https://picsum.photos/seed/tshirt01/400/300",
-    ),
-    (
-        "BT-SPT-01",
-        "Sport Bottle",
-        "gear/bottles",
-        99900,
-        "https://picsum.photos/seed/bottle01/400/300",
-    ),
-    (
-        "CN-MED-01",
-        "Canvas Messenger",
-        "bags",
-        189900,
-        "https://picsum.photos/seed/messenger01/400/300",
-    ),
-    (
-        "ST-ECO-01",
-        "Eco Sticker Pack",
-        "accessories",
-        9900,
-        "https://picsum.photos/seed/sticker01/400/300",
-    ),
+    ("RS-BLK-42", "Runner Pro 42", "shoes/running", 249900, "https://picsum.photos/seed/runner42/400/300"),
+    ("SR-WHT-40", "Street Run 40", "shoes/running", 199900, "https://picsum.photos/seed/street40/400/300"),
+    ("CT-ACE-01", "Court Ace Tennis", "shoes/tennis", 219900, "https://picsum.photos/seed/courtace/400/300"),
+    ("TR-GLD-05", "Trail Blaze 5", "shoes/trail", 299900, "https://picsum.photos/seed/trailblaze/400/300"),
+    ("CW-LT-01", "Cloud Walker", "shoes/walking", 159900, "https://picsum.photos/seed/cloudwalker/400/300"),
+    ("SK-3PK-01", "Run Sock 3-pack", "apparel/socks", 29900, "https://picsum.photos/seed/socks3pk/400/300"),
+    ("TS-CLS-01", "T-Shirt Classic", "apparel", 49900, "https://picsum.photos/seed/tshirt01/400/300"),
+    ("BT-SPT-01", "Sport Bottle", "gear/bottles", 39900, "https://picsum.photos/seed/bottle01/400/300"),
+    ("CN-MED-01", "Canvas Messenger", "bags", 119900, "https://picsum.photos/seed/messenger01/400/300"),
+    ("ST-ECO-01", "Eco Sticker Pack", "accessories", 9900, "https://picsum.photos/seed/sticker01/400/300"),
 ]
 
 
