@@ -64,11 +64,6 @@
 - **Problem:** `resolve_principal` mein `verify_jwt` **ValueError** raise karta hai (bad signature/expired), par wo catch nahi tha → generic 500 handler tak pahunch jaata tha.
 - **Fix:** `resolve_principal` mein `ValueError` catch karke `HTTPException(401, "invalid token")` raise karo — bad/expired token ab 401 deta hai.
 
-## 12. Auth: bad JWT signature → 500 (should be 401)
-- **Error:** E2E test — invalid/expired token par `/v1/me` `500 INTERNAL_ERROR`.
-- **Problem:** `resolve_principal` mein `verify_jwt` **ValueError** raise karta hai (bad signature/expired), par wo catch nahi tha → generic 500 handler tak pahunch jaata tha.
-- **Fix:** `resolve_principal` mein `ValueError` catch karke `HTTPException(401, "invalid token")` raise karo — bad/expired token ab 401 deta hai.
-
 ## 13. Core API: inconsistent error envelope (401 me `{"detail":...}`)
 - **Error:** E2E — auth error `GET /v1/me` no-token → `{"detail":"authentication required"}` (FastAPI default), baaki errors `{"code","message","request_id","retryable"}`. API ka error contract consistent nahi tha.
 - **Problem:** `resolve_principal` rahi `HTTPException(401)`; handlers sirf `AppError` ko envelope dete the, `HTTPException`/`RequestValidationError` ko nahi. Isliye `HTTPException`-based errors FastAPI ke default `{"detail":...}` format me aate the.
@@ -189,6 +184,86 @@
 - **Error/Note:** Metrics middleware me `_grouped` dict add kiya tha jo use nahi hua (ruff F541/over-engineering); `/metrics` request ko un-grouped raw URL par count karta tha.
 - **Problem:** Prometheus counter ko route-template (path) se group karna chahiye, query-string ke saath nahi — warna cardinality badh jaati hai.
 - **Fix:** `_grouped` hata diya; path `request.scope["route"].path` (route template) se liya. Ab `/v1/health` sab requests ek label me count hoti hain.
+
+## 37. Auth: login response me `agent_id` empty (merchant GROW/SELL fail)
+- **Error:** Login karne par session me `agent_id` `""` milta tha; campaigns/opportunities/cart ko `agent_id` chahiye tha.
+- **Problem:** `login()` `_token(user)` ko **bina** agent_id pass karta tha (sirf signup karta tha). Agents table RLS-scoped hai, isliye plain `Session()` se query empty aa rahi thi.
+- **Fix:** `login()` ab tenant ka pehla ACTIVE agent dhoondhta hai (`tenant_session` se pin karke) aur `_token(user, agent_id=...)` return karta hai.
+
+## 38. Auth service: `NameError: name 'Agent' is not defined`
+- **Error:** Signup/login route → `500 NameError: Agent is not defined`.
+- **Problem:** Seed-data removal ke dauran `Agent`/`Product` imports aur agent-seeding remove kar diye, par `login()` ab bhi `select(Agent)` use karta tha — import missing.
+- **Fix:** `from api.db.models import Agent, ...` restore kiya. Agent infrastructure hai (GROW/SELL chahiye), seed data nahi.
+
+## 39. Merchant GROW: non-UUID `agent_id` → 422
+- **Error:** `POST /v1/campaigns` aur `/v1/opportunities/generate` → `422 Input should be a valid UUID, invalid character: found 'g' at 1` (`agent_id: "growth-agent"`).
+- **Problem:** Frontend ne hardcoded string `"growth-agent"` pass kiya; API ko real UUID chahiye (`agents.id` UUID hai).
+- **Fix:** Frontend `campaigns`/`opportunities` pages ab `getSession().agentId` (real UUID) use karte hain.
+
+## 40. Migrations/seed: fresh tenant ka no agent → GROW/SELL break
+- **Error:** Seed data hataane ke baad fresh signup ka tenant empty tha; cart/campaigns ka creation fail (`agent_id` required, koi agent nahi).
+- **Problem:** `signup` ab sirf tenant+user banata tha, agent nahi.
+- **Fix:** `signup` ab har tenant ke liye default `Agent` (type SELL, name "shopping-agent") banata hai; catalog/products merchant console se add karta hai.
+
+## 41. CI integration: `relation "password_reset_tokens" does not exist`
+- **Error:** Integration + red-team tests fail — `UndefinedTableError: relation "password_reset_tokens" does not exist`.
+- **Problem:** Naya `0002_password_reset.sql` migration CI workflow me apply hi nahi hua (workflow sirf `0001_initial.sql` chalata tha).
+- **Fix:** `.github/workflows/integration.yml` ka "Apply migrations" step ab `0002` (aur baad me `0003`) bhi chalata hai.
+
+## 42. Password reset: `reset-password` → 401 (token persisted nahi)
+- **Error:** Sahi reset token ke saath `POST /v1/auth/reset-password` → `401 invalid or expired reset token`.
+- **Problem:** `request_password_reset()` ne `await s.flush()` kiya par **commit nahi** — token DB me save hi nahi hua, lookup par nahi mila.
+- **Fix:** `await s.commit()` kiya (`Session()` context manager auto-commit nahi karta).
+
+## 43. Product images: `column "image_url" does not exist`
+- **Error:** Product create/insert → `ProgrammingError: column "image_url" of relation "products" does not exist`.
+- **Problem:** `image_url` model/schema me add kiya, par **running DB** me column nahi tha (migration sirf fresh boot par chalti hai).
+- **Fix:** `0003_product_images.sql` add kiya aur running DB par manually `alter table products add column if not exists image_url text;` apply kiya.
+
+## 44. Frontend build: `Property 'score' is missing` (password strength)
+- **Error:** Next.js build → `Type error: Property 'score' is missing in type '{ label; color }' but required in type '{ score; label; color }'`.
+- **Problem:** `strength()` helper ka return type `{score,label,color}` likha tha, par labels array me har entry sirf `{label,color}` thi (score missing).
+- **Fix:** Har label entry me `score` field add kiya.
+
+## 45. Razorpay keys not loaded (compose `.env` location)
+- **Error:** `get_provider()` ab bhi `RazorpayMock` tha; app me `razorpay_key_id` empty — real Razorpay use nahi ho raha tha.
+- **Problem:** `.env` repo **root** par tha, par docker compose `.env` ko project directory (`deploy/compose/`) se padhta hai. Isliye `${RAZORPAY_KEY_ID:-}` empty resolve hua.
+- **Fix:** `.env` `deploy/compose/.env` me rakha (repo-root wala bhi). Dono `.env` gitignore'd hain (secret leak nahi hua).
+
+## 46. Frontend: `NEXT_PUBLIC_*` runtime env reach nahi kiya bundle
+- **Error:** Razorpay checkout.js browser me modal nahi khula; key bundle me nahi thi.
+- **Problem:** Next.js `NEXT_PUBLIC_*` **build time** par inline hota hai — runtime `environment:` me pass karne se standalone bundle me reflect nahi hota.
+- **Fix:** `frontend/Dockerfile` me `ARG NEXT_PUBLIC_RAZORPAY_KEY_ID` add kiya aur compose me `build.args` se pass kiya.
+
+## 47. Docker build: pip `THESE PACKAGES DO NOT MATCH THE HASHES`
+- **Error:** `docker build app` → `ERROR: THESE PACKAGES DO NOT MATCH THE HASHES FROM THE REQUIREMENTS FILE`.
+- **Problem:** Transient pip/network/cache hash mismatch (code change nahi).
+- **Fix:** Build retry kiya — success. Flaky infra issue; code theek hai.
+
+## 48. Login routing: buyer login → `/merchant`
+- **Error:** Buyer (member) login karne par `/merchant` par redirect ho raha tha.
+- **Problem:** Redirect logic `data.role === "admin" || role === "merchant"` — login par bhi `role` state use hota tha (pichle signup se "merchant" ho sakta tha); role toggle login par bhi apply hota tha.
+- **Fix:** Login ab **selected role** se route karta hai (Buyer → `/shop` chatbox, Merchant → `/merchant` console); Buyer/Merchant selector login page par dikhta hai.
+
+## 49. Docker Desktop: daemon repeatedly stops
+- **Error:** `failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine ... daemon is not running`.
+- **Problem:** Docker Desktop (Windows) background me band ho jaata hai.
+- **Fix:** `Start-Process "Docker Desktop.exe"` se restart karke engine up hone tak wait karte hain.
+
+## 50. CI formatter: `ruff format --check` fail
+- **Error:** API CI me `Format check (ruff)` step fail — `Process completed with exit code 1`.
+- **Problem:** `auth.py` locally formatted nahi tha after edits; CI me `ruff format --check` fail hua (CI ruff version pinned).
+- **Fix:** `python -m ruff format api` locally run karke commit kiya.
+
+## 51. Shop chat / checkout: only low-value items auto-approve (by design)
+- **Error/Note:** Checkout par high-value item (shoes ₹2,499) `PENDING_APPROVAL` deta hai — payment block ho jaata hai, `Authorize & pay` error "needs merchant approval".
+- **Problem:** Ye **intended risk policy** hai (LOW ≤ ₹100, MEDIUM ₹100–₹1000, HIGH > ₹1000). High-value buy ke liye merchant approval zaroori hai — payment ko loosen nahi kiya (core safety invariant).
+- **Fix:** Checkout ab `PENDING_APPROVAL` ko detection karke `/shop/approval` par route karta hai. Demo ke liye low-value item (Eco Sticker ₹99) auto-approve hokar Razorpay se pay hota hai. Risk thresholds intentionally unchanged.
+
+## 52. E2E smoke: stale hardcoded tenant/agent IDs
+- **Error:** `scripts/ci/run_e2e_smoke.py` me hardcoded `T`/`A` (old abc-store UUIDs) the — clean rebuild ke baad wo tenant/agent exist nahi karte.
+- **Problem:** Seed hataane ke baad woh fixed IDs valid nahi the; smoke script fail/timing out.
+- **Fix:** Smoke script ab ek **fresh signup** se `tenant_id` + `agent_id` derive karta hai (self-contained), hardcoded IDs nahi.
 
 ---
 
