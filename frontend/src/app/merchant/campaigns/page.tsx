@@ -17,10 +17,11 @@ export default function CampaignsPage() {
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
-    const { token } = getSession();
+    const { token, agentId } = getSession();
     if (!token) return setMsg("Add an access token on the login page to create a campaign.");
+    if (!agentId) return setMsg("No agent id in your session. Re-login to refresh it.");
     try {
-      const c = await createCampaign(token, { agent_id: "growth-agent", name, budget_minor: Math.round(Number(budget) * 100), discount_pct: Number(discount), margin_pct: Number(margin), duration_days: 30 });
+      const c = await createCampaign(token, { agent_id: agentId, name, budget_minor: Math.round(Number(budget) * 100), discount_pct: Number(discount), margin_pct: Number(margin), duration_days: 30 });
       setCreated(c); setMsg("");
     } catch (err) { setMsg((err as Error).message); }
   }

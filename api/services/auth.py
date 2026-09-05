@@ -114,7 +114,21 @@ async def login(*, email: str, password: str) -> dict:
         user = (await s.execute(select(User).where(User.email == email))).scalar_one_or_none()
     if user is None or not verify_password(password, user.password_hash):
         raise AuthenticationError("invalid credentials")
-    return _token(user)
+    # Supply the tenant's primary agent id so the frontend can drive GROW/SELL (the agents
+    # table is RLS-scoped, so pin the tenant to read it). Empty when the user has no tenant.
+    agent_id = ""
+    if user.tenant_id is not None:
+        async with tenant_session(str(user.tenant_id)) as s:
+            agent = (
+                await s.execute(
+                    select(Agent)
+                    .where(Agent.status == "ACTIVE")
+                    .order_by(Agent.created_at.asc())
+                    .limit(1)
+                )
+            ).scalar_one_or_none()
+            agent_id = str(agent.id) if agent is not None else ""
+    return _token(user, agent_id=agent_id)
 
 
 def validate_password_strength(password: str) -> None:

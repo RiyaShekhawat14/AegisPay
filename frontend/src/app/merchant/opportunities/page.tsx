@@ -13,10 +13,11 @@ export default function OpportunitiesPage() {
     getOpportunities(token || undefined).then(setItems).catch((e) => setMsg(e.message));
   }
   async function generate() {
-    const { token } = getSession();
+    const { token, agentId } = getSession();
     if (!token) return setMsg("Add an access token on the login page to generate opportunities.");
+    if (!agentId) return setMsg("No agent id in your session. Re-login to refresh it.");
     try {
-      const list = await generateOpportunities(token, "growth-agent");
+      const list = await generateOpportunities(token, agentId);
       setItems(list); setMsg("");
     } catch (e) { setMsg((e as Error).message); }
   }
