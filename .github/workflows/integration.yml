@@ -34,7 +34,9 @@ jobs:
       - name: Apply migrations
         env:
           PGPASSWORD: aegispay
-        run: psql -h localhost -U aegispay_migration -d aegispay -f db/migrations/0001_initial.sql
+        run: |
+          psql -h localhost -U aegispay_migration -d aegispay -f db/migrations/0001_initial.sql
+          psql -h localhost -U aegispay_migration -d aegispay -f db/migrations/0002_password_reset.sql
       - name: Integration + red-team tests
         working-directory: api
         env:
