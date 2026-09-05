@@ -19,12 +19,67 @@ from sqlalchemy import select, text
 from api.core.config import get_settings
 from api.core.exceptions import AuthenticationError, ConflictError, ValidationError
 from api.core.jwt import sign
-from api.db.models import Agent, PasswordResetToken, Tenant, User
+from api.db.models import Agent, PasswordResetToken, Product, Tenant, User
 from api.db.session import Session, tenant_session
 
 TOKEN_TTL_MINUTES = 60
 RESET_TOKEN_BYTES = 32
 _RESET_LETTER_DIGIT = re.compile(r"(?=.*[A-Za-z])(?=.*\d)")
+
+# Demo catalog seeded into each new tenant so a fresh buyer immediately sees products with
+# images (the merchant can replace/augment these via the console). Images are stable
+# placeholder photos keyed by SKU.
+_DEMO_PRODUCTS = [
+    (
+        "RS-BLK-42",
+        "Runner Pro 42",
+        "shoes/running",
+        349900,
+        "https://picsum.photos/seed/runner42/400/300",
+    ),
+    (
+        "SR-WHT-40",
+        "Street Run 40",
+        "shoes/running",
+        279900,
+        "https://picsum.photos/seed/street40/400/300",
+    ),
+    (
+        "SK-3PK-01",
+        "Run Sock 3-pack",
+        "apparel/socks",
+        49900,
+        "https://picsum.photos/seed/socks3pk/400/300",
+    ),
+    (
+        "TS-CLS-01",
+        "T-Shirt Classic",
+        "apparel",
+        79900,
+        "https://picsum.photos/seed/tshirt01/400/300",
+    ),
+    (
+        "BT-SPT-01",
+        "Sport Bottle",
+        "gear/bottles",
+        99900,
+        "https://picsum.photos/seed/bottle01/400/300",
+    ),
+    (
+        "CN-MED-01",
+        "Canvas Messenger",
+        "bags",
+        189900,
+        "https://picsum.photos/seed/messenger01/400/300",
+    ),
+    (
+        "ST-ECO-01",
+        "Eco Sticker Pack",
+        "accessories",
+        9900,
+        "https://picsum.photos/seed/sticker01/400/300",
+    ),
+]
 
 
 def hash_password(password: str) -> str:
@@ -84,8 +139,20 @@ async def signup(*, email: str, password: str, role: str, merchant_name: str) ->
             {"i": uuid.uuid4(), "t": tenant_id, "u": user_id, "r": role},
         )
         # Every tenant gets a default agent so GROW (campaigns/opportunities) and SELL (carts)
-        # can run. No catalog/products are seeded — the merchant adds those via the console.
+        # can run, plus a small demo catalog with images so a fresh buyer can shop immediately.
         s.add(Agent(id=agent_id, tenant_id=tenant_id, name="shopping-agent", type="SELL"))
+        for sku, name, category, price, image_url in _DEMO_PRODUCTS:
+            s.add(
+                Product(
+                    id=uuid.uuid4(),
+                    tenant_id=tenant_id,
+                    sku=sku,
+                    name=name,
+                    category=category,
+                    price_minor=price,
+                    image_url=image_url,
+                )
+            )
     user = User(id=user_id, email=email, tenant_id=tenant_id, role=role)  # token claims
     return _token(user, agent_id=str(agent_id))
 

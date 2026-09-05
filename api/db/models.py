@@ -113,6 +113,7 @@ class Product(Base, TimestampMixin, TenantMixin):
     price_minor: Mapped[int] = mapped_column(BigInteger)
     currency: Mapped[str] = mapped_column(String(3), default="INR")
     status: Mapped[str] = mapped_column(String(32), default="ACTIVE")
+    image_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
 
 
 class Cart(Base, TimestampMixin, TenantMixin):

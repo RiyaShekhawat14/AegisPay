@@ -22,7 +22,7 @@ services:
     restart: "no"
     environment:
       PGPASSWORD: aegispay
-    command: ["sh", "-c", "psql -v ON_ERROR_STOP=1 -h db -U aegispay_migration -d aegispay -f /migrations/0001_initial.sql && psql -v ON_ERROR_STOP=1 -h db -U aegispay_migration -d aegispay -f /migrations/0002_password_reset.sql"]
+    command: ["sh", "-c", "psql -v ON_ERROR_STOP=1 -h db -U aegispay_migration -d aegispay -f /migrations/0001_initial.sql && psql -v ON_ERROR_STOP=1 -h db -U aegispay_migration -d aegispay -f /migrations/0002_password_reset.sql && psql -v ON_ERROR_STOP=1 -h db -U aegispay_migration -d aegispay -f /migrations/0003_product_images.sql"]
     volumes: ["../../db/migrations:/migrations:ro"]
     depends_on:
       db:
@@ -57,6 +57,10 @@ services:
       DATABASE_URL: postgresql+asyncpg://aegispay_app:aegispay@db:5432/aegispay
       REDIS_URL: redis://redis:6379/0
       SQS_URL: http://localstack:4566/000000000000/aegispay
+      # Razorpay test mode. Leave empty to use the in-memory mock; set rzp_test_* keys
+      # to hit the real Razorpay sandbox.
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
     depends_on:
       db_migrate:
         condition: service_completed_successfully
@@ -100,6 +104,8 @@ services:
     restart: unless-stopped
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:8000
+      # Razorpay test-mode key exposed to the browser checkout (rzp_test_...).
+      NEXT_PUBLIC_RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
     depends_on:
       app:
         condition: service_healthy

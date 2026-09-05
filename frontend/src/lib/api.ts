@@ -12,6 +12,7 @@ export type Product = {
   price_minor: number;
   currency: string;
   status: string;
+  image_url?: string | null;
 };
 
 export type Opportunity = {
@@ -79,7 +80,7 @@ export async function controlPlaneUp(): Promise<boolean> {
 
 export const getProducts = (token?: string) => api<Product[]>("/v1/products", { token });
 export const getOpportunities = (token?: string) => api<Opportunity[]>("/v1/opportunities", { token });
-export const createProduct = (token: string, body: { sku: string; name: string; price_minor: number; category?: string }) =>
+export const createProduct = (token: string, body: { sku: string; name: string; price_minor: number; category?: string; image_url?: string }) =>
   api<Product>("/v1/products", { method: "POST", token, body: JSON.stringify(body) });
 export const generateOpportunities = (token: string, agentId: string) =>
   api<Opportunity[]>("/v1/opportunities/generate", { method: "POST", token, body: JSON.stringify({ agent_id: agentId }) });
@@ -94,6 +95,19 @@ export const addCartItem = (token: string, cartId: string, productId: string, qu
 export const checkout = (token: string, cartId: string) => api<Order>(`/v1/carts/${cartId}/checkout`, { method: "POST", token });
 export const requestAuthorization = (token: string, cartId: string) =>
   api<Authorization>("/v1/authorizations", { method: "POST", token, body: JSON.stringify({ cart_id: cartId }) });
+
+export type Payment = {
+  id: string;
+  order_id: string;
+  status: string;
+  amount_minor: number;
+  currency: string;
+  provider: string;
+  provider_order_id: string | null;
+  provider_payment_id: string | null;
+};
+export const initiatePayment = (token: string, orderId: string, authorizationId: string) =>
+  api<Payment>("/v1/payments", { method: "POST", token, body: JSON.stringify({ order_id: orderId, authorization_id: authorizationId }) });
 
 // --- Auth / password reset (no token needed) ---
 export const forgotPassword = (email: string) =>

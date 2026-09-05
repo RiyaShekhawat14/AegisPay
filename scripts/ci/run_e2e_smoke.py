@@ -55,7 +55,7 @@ async def main():
     c = httpx.AsyncClient(base_url=BASE, headers=h, timeout=30)
 
     products = httpx.get(BASE + "/products", headers=h).json()
-    ok("catalog readable (empty for fresh tenant)", isinstance(products, list), f"{len(products)}")
+    ok("catalog readable (seeded demo products)", isinstance(products, list), f"{len(products)}")
 
     _, order, az = await _flow(5000)
     ok("low-risk authorization -> VALID", az["status"] == "VALID")

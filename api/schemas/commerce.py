@@ -16,6 +16,7 @@ class ProductIn(BaseModel):
     price_minor: int = Field(ge=0)
     category: str | None = None
     currency: str = "INR"
+    image_url: str | None = None
 
 
 class ProductOut(BaseModel):
@@ -29,6 +30,7 @@ class ProductOut(BaseModel):
     price_minor: int
     currency: str
     status: str
+    image_url: str | None = None
 
 
 class CartCreateIn(BaseModel):

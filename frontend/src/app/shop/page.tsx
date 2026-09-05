@@ -99,7 +99,9 @@ export default function ShopPage() {
                   <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3">
                     {m.products.map((p) => (
                       <div key={p.id} className="flex flex-col rounded-xl border border-border bg-surface p-2.5">
-                        <div className="flex h-14 items-center justify-center rounded-lg bg-hover text-2xl">🛍️</div>
+                        <div className="flex h-24 items-center justify-center overflow-hidden rounded-lg bg-hover">
+                          {p.image_url ? <img src={p.image_url} alt={p.name} className="h-full w-full object-cover" /> : <span className="text-2xl">🛍️</span>}
+                        </div>
                         <div className="mt-2 text-xs font-semibold">{p.name}</div>
                         <div className="text-[10px] text-muted">{p.category ?? "general"} · {p.status}</div>
                         <div className="mt-1 text-sm font-bold">{inr(p.price_minor)}</div>

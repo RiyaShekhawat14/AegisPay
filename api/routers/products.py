@@ -45,6 +45,7 @@ async def create_product(
             category=body.category,
             price_minor=body.price_minor,
             currency=body.currency,
+            image_url=body.image_url,
         )
     )
     return ProductOut.model_validate(product)

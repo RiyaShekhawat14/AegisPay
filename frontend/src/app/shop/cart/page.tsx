@@ -43,7 +43,9 @@ export default function CartPage() {
             <div className="space-y-2">
               {line.map((it) => (
                 <div key={it.productId} className="flex items-center gap-3 rounded-lg border border-border p-2.5">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-hover text-lg">🛍️</div>
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-hover">
+                    {products.find((p) => p.id === it.productId)?.image_url ? <img src={products.find((p) => p.id === it.productId)?.image_url!} alt="" className="h-full w-full object-cover" /> : <span className="text-lg">🛍️</span>}
+                  </div>
                   <div className="min-w-0 flex-1"><b className="text-sm">{products.find((p) => p.id === it.productId)?.name ?? it.productId}</b></div>
                   <div className="flex items-center gap-2">
                     <button onClick={() => setQty(it.productId, -1)} className="h-5 w-5 rounded border border-border text-xs">−</button>
