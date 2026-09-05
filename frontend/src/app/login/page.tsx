@@ -41,9 +41,12 @@ export default function LoginPage() {
   const [hint, setHint] = useState("");
 
   const pw = strength(password);
-  const mismatch = mode === "signup" && confirm.length > 0 && confirm !== password;
+  const mismatch =
+    (mode === "signup" || mode === "reset") && confirm.length > 0 && confirm !== password;
+  const [done, setDone] = useState(false);
 
   function backToLogin(message = "") {
+    setDone(false);
     setMode("login");
     setMsg(message);
     setPassword("");
@@ -81,7 +84,8 @@ export default function LoginPage() {
       setBusy(true);
       try {
         const data = await resetPassword(resetToken, password);
-        backToLogin(data.message ?? "Password updated. Please log in.");
+        setDone(true);
+        setMsg(data.message ?? "Password updated.");
       } catch (err) {
         setMsg(err instanceof Error ? err.message : "Reset failed.");
       } finally {
@@ -133,45 +137,61 @@ export default function LoginPage() {
         <form onSubmit={submit} className="rounded-2xl border border-border bg-surface p-6 shadow-card">
           {mode === "forgot" || mode === "reset" ? (
             <div className="space-y-3">
-              <div>
-                <h2 className="text-sm font-semibold">Reset password</h2>
-                <p className="text-xs text-muted">We'll help you set a new password.</p>
-              </div>
-              {mode === "forgot" && (
-                <label className="block">
-                  <span className="text-xs font-semibold">Email</span>
-                  <input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className="aegis-input mt-1 w-full px-3 py-2" />
-                </label>
-              )}
-              {mode === "reset" && (
+              {done ? (
+                <div className="space-y-3 rounded-xl border border-ok/40 bg-okSoft p-5 text-center">
+                  <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-ok text-white">✓</div>
+                  <div>
+                    <h2 className="text-sm font-semibold">Password updated</h2>
+                    <p className="text-xs text-muted">{msg || "Your password has been changed. You can now log in."}</p>
+                  </div>
+                  <button type="button" onClick={() => backToLogin()} className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-95">
+                    Continue to login
+                  </button>
+                </div>
+              ) : (
                 <>
-                  {resetToken && (
+                  <div>
+                    <h2 className="text-sm font-semibold">Reset password</h2>
+                    <p className="text-xs text-muted">We'll help you set a new password.</p>
+                  </div>
+                  {mode === "forgot" && (
                     <label className="block">
-                      <span className="text-xs font-semibold">Reset token</span>
-                      <input autoComplete="off" value={resetToken} onChange={(e) => setResetToken(e.target.value)} className="aegis-input mt-1 w-full px-3 py-2" />
-                      {hint && <span className="mt-1 block text-[11px] text-muted">{hint}</span>}
+                      <span className="text-xs font-semibold">Email</span>
+                      <input type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" className="aegis-input mt-1 w-full px-3 py-2" />
                     </label>
                   )}
-                  <label className="block">
-                    <span className="text-xs font-semibold">New password</span>
-                    <div className="relative mt-1">
-                      <input type={showPw ? "text" : "password"} required autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="aegis-input w-full px-3 py-2 pr-10" />
-                      <button type="button" onClick={() => setShowPw((v) => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-primary">{showPw ? "Hide" : "Show"}</button>
-                    </div>
-                  </label>
-                  <label className="block">
-                    <span className="text-xs font-semibold">Confirm</span>
-                    <input type={showPw ? "text" : "password"} required autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="••••••••" className="aegis-input mt-1 w-full px-3 py-2" />
-                  </label>
+                  {mode === "reset" && (
+                    <>
+                      {resetToken && (
+                        <label className="block">
+                          <span className="text-xs font-semibold">Reset token</span>
+                          <input autoComplete="off" value={resetToken} onChange={(e) => setResetToken(e.target.value)} className="aegis-input mt-1 w-full px-3 py-2" />
+                          {hint && <span className="mt-1 block text-[11px] text-muted">{hint}</span>}
+                        </label>
+                      )}
+                      <label className="block">
+                        <span className="text-xs font-semibold">New password</span>
+                        <div className="relative mt-1">
+                          <input type={showPw ? "text" : "password"} required autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="aegis-input w-full px-3 py-2 pr-10" />
+                          <button type="button" onClick={() => setShowPw((v) => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-primary">{showPw ? "Hide" : "Show"}</button>
+                        </div>
+                      </label>
+                      <label className="block">
+                        <span className="text-xs font-semibold">Confirm</span>
+                        <input type={showPw ? "text" : "password"} required autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="••••••••" className="aegis-input mt-1 w-full px-3 py-2" />
+                      </label>
+                      {mismatch && <p className="text-xs text-err">Passwords do not match.</p>}
+                    </>
+                  )}
+                  {msg && <p className="text-xs text-err">{msg}</p>}
+                  <button type="submit" disabled={busy || mismatch} className="mt-2 w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-55">
+                    {busy ? "Working…" : mode === "forgot" ? "Send reset link" : "Set new password"}
+                  </button>
+                  <div className="text-center text-xs text-muted">
+                    <button type="button" onClick={() => backToLogin()} className="font-semibold text-primary hover:underline">Back to login</button>
+                  </div>
                 </>
               )}
-              {msg && <p className="text-xs text-err">{msg}</p>}
-              <button type="submit" disabled={busy} className="mt-2 w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-55">
-                {busy ? "Working…" : mode === "forgot" ? "Send reset link" : "Set new password"}
-              </button>
-              <div className="text-center text-xs text-muted">
-                <button type="button" onClick={() => backToLogin()} className="font-semibold text-primary hover:underline">Back to login</button>
-              </div>
             </div>
           ) : (
             <div className="space-y-3">
