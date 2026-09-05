@@ -7,18 +7,29 @@ import uuid
 from fastapi import APIRouter, HTTPException
 
 from api.core.exceptions import ConflictError
-from api.db.models import Product
+from api.db.models import Product, Tenant
 from api.db.repositories import ProductRepo
 from api.dependencies.auth import CurrentPrincipal
 from api.dependencies.db import DbSession
 from api.schemas.commerce import ProductIn, ProductOut
+from api.services.auth import seed_demo_catalog
 
 router = APIRouter(prefix="/v1", tags=["catalog"])
 
 
 @router.get("/products", response_model=list[ProductOut])
 async def list_products(session: DbSession, principal: CurrentPrincipal) -> list[ProductOut]:
-    return [ProductOut.model_validate(p) for p in await ProductRepo(session).list()]
+    products = await ProductRepo(session).list()
+    # Lazy-seed: if this tenant has no catalog yet, provision the demo products so a buyer
+    # always has something to shop. Only for real tenants (skip fabricated test tenants),
+    # and only when the tenant row exists to satisfy the FK.
+    if not products:
+        exists = await session.get(Tenant, uuid.UUID(principal.tenant_id))
+        if exists is not None:
+            await seed_demo_catalog(session, principal.tenant_id)
+            await session.commit()
+            products = await ProductRepo(session).list()
+    return [ProductOut.model_validate(p) for p in products]
 
 
 @router.get("/products/{product_id}", response_model=ProductOut)

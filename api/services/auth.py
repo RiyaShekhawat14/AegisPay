@@ -27,9 +27,6 @@ RESET_TOKEN_BYTES = 32
 _RESET_LETTER_DIGIT = re.compile(r"(?=.*[A-Za-z])(?=.*\d)")
 
 # Demo catalog seeded into each new tenant so a fresh buyer immediately sees products with
-# images (the merchant can replace/augment these via the console). Images are stable
-# placeholder photos keyed by SKU.
-# Demo catalog seeded into each new tenant so a fresh buyer immediately sees products with
 # images (the merchant can replace/augment these via the console). Prices are realistic INR.
 _DEMO_PRODUCTS = [
     (
@@ -105,6 +102,27 @@ _DEMO_PRODUCTS = [
 ]
 
 
+async def seed_demo_catalog(session, tenant_id: str) -> None:
+    """Insert the demo catalog for a tenant that has few/no products (idempotent by SKU)."""
+    for sku, name, category, price, image_url in _DEMO_PRODUCTS:
+        dup = (
+            await session.execute(select(Product).where(Product.sku == sku))
+        ).scalar_one_or_none()
+        if dup is not None:
+            continue
+        session.add(
+            Product(
+                id=uuid.uuid4(),
+                tenant_id=uuid.UUID(tenant_id),
+                sku=sku,
+                name=name,
+                category=category,
+                price_minor=price,
+                image_url=image_url,
+            )
+        )
+
+
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
@@ -164,18 +182,7 @@ async def signup(*, email: str, password: str, role: str, merchant_name: str) ->
         # Every tenant gets a default agent so GROW (campaigns/opportunities) and SELL (carts)
         # can run, plus a small demo catalog with images so a fresh buyer can shop immediately.
         s.add(Agent(id=agent_id, tenant_id=tenant_id, name="shopping-agent", type="SELL"))
-        for sku, name, category, price, image_url in _DEMO_PRODUCTS:
-            s.add(
-                Product(
-                    id=uuid.uuid4(),
-                    tenant_id=tenant_id,
-                    sku=sku,
-                    name=name,
-                    category=category,
-                    price_minor=price,
-                    image_url=image_url,
-                )
-            )
+        await seed_demo_catalog(s, str(tenant_id))
     user = User(id=user_id, email=email, tenant_id=tenant_id, role=role)  # token claims
     return _token(user, agent_id=str(agent_id))
 
