@@ -93,3 +93,28 @@ async def add_item(
     await _rehash(cart, items)
     await session.flush()
     return _to_cart_out(cart, items)
+
+
+@router.put("/carts/{cart_id}/items/{product_id}", response_model=CartOut)
+async def update_item(
+    cart_id: uuid.UUID,
+    product_id: uuid.UUID,
+    body: CartItemIn,
+    session: DbSession,
+    principal: CurrentPrincipal,
+) -> CartOut:
+    cart = await CartRepo(session).get(cart_id)
+    if cart is None:
+        raise HTTPException(404, "not found")
+    item = await CartRepo(session).item(cart_id, product_id)
+    if item is None:
+        raise HTTPException(404, "item not found")
+    if body.quantity <= 0:
+        await session.delete(item)
+    else:
+        item.quantity = body.quantity
+        item.line_total_minor = item.unit_price_minor * body.quantity
+    items = await CartRepo(session).items(cart_id)
+    await _rehash(cart, items)
+    await session.flush()
+    return _to_cart_out(cart, items)

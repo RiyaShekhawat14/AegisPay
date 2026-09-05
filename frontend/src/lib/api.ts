@@ -43,7 +43,7 @@ export type Cart = {
 
 export type Order = { id: string; cart_id: string; status: string; total_minor: number; currency: string; cart_hash: string };
 
-export type Authorization = { id: string; cart_id: string; status: string; amount_minor: number; currency: string };
+export type Authorization = { id: string; cart_id: string; status: string; amount_minor: number; currency: string; policy_version?: string; risk?: unknown };
 
 export async function api<T>(path: string, init?: RequestInit & { token?: string }): Promise<T> {
   const ctrl = new AbortController();
@@ -92,9 +92,17 @@ export const createCart = (token: string, agentId: string) =>
   api<Cart>("/v1/carts", { method: "POST", token, body: JSON.stringify({ agent_id: agentId }) });
 export const addCartItem = (token: string, cartId: string, productId: string, quantity: number) =>
   api<Cart>(`/v1/carts/${cartId}/items`, { method: "POST", token, body: JSON.stringify({ product_id: productId, quantity }) });
+export const updateCartItem = (token: string, cartId: string, productId: string, quantity: number) =>
+  api<Cart>(`/v1/carts/${cartId}/items/${productId}`, { method: "PUT", token, body: JSON.stringify({ product_id: productId, quantity }) });
 export const checkout = (token: string, cartId: string) => api<Order>(`/v1/carts/${cartId}/checkout`, { method: "POST", token });
 export const requestAuthorization = (token: string, cartId: string) =>
   api<Authorization>("/v1/authorizations", { method: "POST", token, body: JSON.stringify({ cart_id: cartId }) });
+export const getAuthorization = (token: string, authzId: string) =>
+  api<Authorization>(`/v1/authorizations/${authzId}`, { token });
+export const approveAuthorization = (token: string, authzId: string, approverId: string) =>
+  api<Authorization>(`/v1/authorizations/${authzId}/approve`, { method: "POST", token, body: JSON.stringify({ approver_id: approverId }) });
+export const listPendingAuthorizations = (token: string) =>
+  api<Authorization[]>("/v1/authorizations", { token });
 
 export type Payment = {
   id: string;

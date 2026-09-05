@@ -56,6 +56,11 @@ async def create_authorization(
     return _out(authz)
 
 
+@router.get("/authorizations", response_model=list[AuthzOut])
+async def list_authorizations(session: DbSession, principal: CurrentPrincipal) -> list[AuthzOut]:
+    return [_out(a) for a in await AuthorizationService(session).list_pending()]
+
+
 @router.get("/authorizations/{authz_id}", response_model=AuthzOut)
 async def get_authorization(
     authz_id: uuid.UUID, session: DbSession, principal: CurrentPrincipal

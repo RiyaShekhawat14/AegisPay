@@ -47,6 +47,12 @@ class CartRepo(BaseRepo):
         res = await self.session.execute(select(CartItem).where(CartItem.cart_id == cart_id))
         return list(res.scalars().all())
 
+    async def item(self, cart_id: uuid.UUID, product_id: uuid.UUID) -> CartItem | None:
+        res = await self.session.execute(
+            select(CartItem).where(CartItem.cart_id == cart_id, CartItem.product_id == product_id)
+        )
+        return res.scalar_one_or_none()
+
 
 class OrderRepo(BaseRepo):
     async def get(self, order_id: uuid.UUID) -> Order | None:

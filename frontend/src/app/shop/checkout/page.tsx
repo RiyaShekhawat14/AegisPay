@@ -44,7 +44,10 @@ export default function CheckoutPage() {
       const order = await checkout(token, cart.cartId);
       const authz = await requestAuthorization(token, order.cart_id);
       if (authz.status !== "VALID") {
+        // Gated: remember the authorization + order so the approval page can poll status
+        // and, once valid, pay via Razorpay.
         localStorage.setItem("aegispay.pendingAuthz", authz.id);
+        localStorage.setItem("aegispay.pendingOrder", order.id);
         router.push("/shop/approval");
         return;
       }

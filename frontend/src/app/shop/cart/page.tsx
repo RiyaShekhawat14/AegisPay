@@ -3,7 +3,7 @@ import AppShell from "@/components/AppShell";
 import { Badge, Button, Panel } from "@/components/ui";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getProducts, getSession, inr, Product } from "@/lib/api";
+import { getProducts, getSession, inr, Product, updateCartItem } from "@/lib/api";
 
 export default function CartPage() {
   const router = useRouter();
@@ -21,9 +21,15 @@ export default function CartPage() {
 
   function setQty(id: string, d: number) {
     const cart = JSON.parse(localStorage.getItem("aegispay.cart") ?? '{"cartId":"","items":{}}') as { cartId: string; items: Record<string, number> };
-    cart.items[id] = (cart.items[id] ?? 0) + d;
+    const nextQty = Math.max(0, (cart.items[id] ?? 0) + d);
+    cart.items[id] = nextQty;
     if (cart.items[id] <= 0) delete cart.items[id];
     localStorage.setItem("aegispay.cart", JSON.stringify(cart));
+    // Persist quantity to the backend so the order/authorization sees the real total.
+    const { token } = getSession();
+    if (token && cart.cartId) {
+      updateCartItem(token, cart.cartId, id, nextQty).catch(() => {});
+    }
     setLine(Object.entries(cart.items).map(([productId, qty]) => ({ productId, qty })));
   }
 

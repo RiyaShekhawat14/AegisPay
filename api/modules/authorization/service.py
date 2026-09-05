@@ -111,6 +111,14 @@ class AuthorizationService:
     async def get(self, authorization_id: uuid.UUID) -> Authorization | None:
         return await self.session.get(Authorization, authorization_id)
 
+    async def list_pending(self) -> list[Authorization]:
+        res = await self.session.execute(
+            select(Authorization)
+            .where(Authorization.status == "PENDING_APPROVAL")
+            .order_by(Authorization.created_at.desc())
+        )
+        return list(res.scalars().all())
+
     async def approve(
         self, *, authorization_id: uuid.UUID, approver_id: uuid.UUID
     ) -> Authorization:
