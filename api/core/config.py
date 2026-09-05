@@ -39,6 +39,12 @@ class Settings(BaseSettings):
     jwt_secret: str = "change-me"
     oidc_issuer: str = ""
 
+    # Password reset: token TTL (minutes) and whether to reveal the reset token in the API
+    # response. With no SMTP provider configured the token is returned (and logged) so a demo
+    # can complete the flow; set to true only outside production, never in prod.
+    password_reset_ttl_minutes: int = 30
+    password_reset_reveal_token: bool = True
+
     field_enc_key: str = ""
 
     otel_exporter_otlp_endpoint: str = ""

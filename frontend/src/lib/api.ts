@@ -95,6 +95,18 @@ export const checkout = (token: string, cartId: string) => api<Order>(`/v1/carts
 export const requestAuthorization = (token: string, cartId: string) =>
   api<Authorization>("/v1/authorizations", { method: "POST", token, body: JSON.stringify({ cart_id: cartId }) });
 
+// --- Auth / password reset (no token needed) ---
+export const forgotPassword = (email: string) =>
+  api<{ message: string; reset_token: string }>("/v1/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+export const resetPassword = (token: string, password: string) =>
+  api<{ message: string }>("/v1/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ token, password }),
+  });
+
 // Client-side session (auth is token-based; login/signup issues a JWT).
 const ROLE_KEY = "aegispay.role";
 const TOKEN_KEY = "aegispay.token";

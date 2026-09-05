@@ -7,6 +7,9 @@ accepted from the frontend to derive tenant — identity comes from login only.
 
 from __future__ import annotations
 
+import hashlib
+import re
+import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
 
@@ -14,12 +17,14 @@ import bcrypt
 from sqlalchemy import select, text
 
 from api.core.config import get_settings
-from api.core.exceptions import AuthenticationError, ConflictError
+from api.core.exceptions import AuthenticationError, ConflictError, ValidationError
 from api.core.jwt import sign
-from api.db.models import Agent, Product, Tenant, User
+from api.db.models import Agent, PasswordResetToken, Product, Tenant, User
 from api.db.session import Session, tenant_session
 
 TOKEN_TTL_MINUTES = 60
+RESET_TOKEN_BYTES = 32
+_RESET_LETTER_DIGIT = re.compile(r"(?=.*[A-Za-z])(?=.*\d)")
 
 # Seed each new tenant with a small demo store so a fresh signup is immediately shoppable.
 _DEMO_PRODUCTS = [
@@ -110,3 +115,71 @@ async def login(*, email: str, password: str) -> dict:
     if user is None or not verify_password(password, user.password_hash):
         raise AuthenticationError("invalid credentials")
     return _token(user)
+
+
+def validate_password_strength(password: str) -> None:
+    """Reject weak passwords: min 8 chars and at least one letter + one digit."""
+    if len(password) < 8:
+        raise ValidationError("password must be at least 8 characters")
+    if not _RESET_LETTER_DIGIT.search(password):
+        raise ValidationError("password must contain at least one letter and one digit")
+
+
+def _reset_token_hash(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+async def request_password_reset(*, email: str) -> dict:
+    """Generate a single-use, expiring reset token for the account (if it exists).
+
+    We never reveal whether an account exists (anti-enumeration): a real reset link would be
+    emailed. With no mailer configured, the token is returned only when configured to do so
+    (dev/demo). The response message is identical whether or not the account exists.
+    """
+    email = email.strip().lower()
+    async with Session() as s:
+        user = (await s.execute(select(User).where(User.email == email))).scalar_one_or_none()
+        raw = secrets.token_urlsafe(RESET_TOKEN_BYTES)
+        if user is not None:
+            s.add(
+                PasswordResetToken(
+                    user_id=user.id,
+                    token_hash=_reset_token_hash(raw),
+                    expires_at=datetime.now(UTC)
+                    + timedelta(minutes=get_settings().password_reset_ttl_minutes),
+                )
+            )
+            await s.commit()
+    settings = get_settings()
+    return {
+        "message": "If an account exists for that email, a reset link has been sent.",
+        # Only return a usable token for a real account, and only outside production.
+        "reset_token": raw if (user is not None and settings.password_reset_reveal_token) else "",
+    }
+
+
+async def reset_password(*, token: str, password: str) -> dict:
+    """Validate a reset token and set a new password (single-use, expires after TTL)."""
+    validate_password_strength(password)
+    if not token:
+        raise AuthenticationError("invalid or expired reset token")
+    token_hash = _reset_token_hash(token)
+    async with Session() as s:
+        record = (
+            await s.execute(
+                select(PasswordResetToken).where(
+                    PasswordResetToken.token_hash == token_hash,
+                    PasswordResetToken.used_at.is_(None),
+                )
+            )
+        ).scalar_one_or_none()
+        if record is None or record.expires_at < datetime.now(UTC):
+            raise AuthenticationError("invalid or expired reset token")
+        user = (await s.execute(select(User).where(User.id == record.user_id))).scalar_one_or_none()
+        if user is None:
+            raise AuthenticationError("invalid or expired reset token")
+        # Burn this token first (a same token cannot be replayed even if the set below fails).
+        record.used_at = datetime.now(UTC)
+        user.password_hash = hash_password(password)
+        await s.commit()
+    return {"message": "Password updated."}

@@ -22,7 +22,7 @@ services:
     restart: "no"
     environment:
       PGPASSWORD: aegispay
-    command: ["psql", "-v", "ON_ERROR_STOP=1", "-h", "db", "-U", "aegispay_migration", "-d", "aegispay", "-f", "/migrations/0001_initial.sql"]
+    command: ["sh", "-c", "psql -v ON_ERROR_STOP=1 -h db -U aegispay_migration -d aegispay -f /migrations/0001_initial.sql && psql -v ON_ERROR_STOP=1 -h db -U aegispay_migration -d aegispay -f /migrations/0002_password_reset.sql"]
     volumes: ["../../db/migrations:/migrations:ro"]
     depends_on:
       db:
