@@ -98,7 +98,7 @@ async def test_evaluate_low_and_high(setup):
     assert r.json()["decision"] == "ALLOW"
     assert r.json()["risk"] == "LOW"
 
-    r = await c.post("/v1/policy/evaluate", headers=h, json={"amount_minor": 500_000})
+    r = await c.post("/v1/policy/evaluate", headers=h, json={"amount_minor": 3_000_000})
     assert r.json()["decision"] == "HUMAN_APPROVAL_REQUIRED"
     assert r.json()["risk"] == "HIGH"
 
@@ -117,7 +117,7 @@ async def test_low_amount_authorizes_immediately(setup):
 async def test_high_amount_requires_quorum(setup):
     tenant, agent, c = setup
     h = _auth_headers(tenant)
-    cart_id = await _cart(c, tenant, agent, 500_000)
+    cart_id = await _cart(c, tenant, agent, 3_000_000)
     r = await c.post("/v1/authorizations", headers=h, json={"cart_id": str(cart_id)})
     assert r.status_code == 201, r.text
     authz_id = r.json()["id"]

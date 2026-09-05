@@ -5,13 +5,13 @@ from api.modules.risk.service import RiskLevel
 
 
 def test_low_amount_auto_allow():
-    ev = evaluate(amount_minor=5000)
+    ev = evaluate(amount_minor=250_000)  # <= ₹3,000
     assert ev.decision == "ALLOW"
     assert ev.risk is RiskLevel.LOW
 
 
 def test_high_amount_requires_human():
-    ev = evaluate(amount_minor=200_000)
+    ev = evaluate(amount_minor=3_000_000)  # > ₹20,000
     assert ev.decision == "HUMAN_APPROVAL_REQUIRED"
     assert ev.risk is RiskLevel.HIGH
 

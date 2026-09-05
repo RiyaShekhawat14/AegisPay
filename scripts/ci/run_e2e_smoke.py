@@ -64,7 +64,7 @@ async def main():
     pp = (await c.get("/passport/" + pay["id"])).json()
     ok("passport explainable", len(pp) >= 15 and pp["authorization"] == "VALID")
 
-    _, order2, az2 = await _flow(400_000)
+    _, order2, az2 = await _flow(1_500_000)
     ok("high-risk -> PENDING_APPROVAL (gated)", az2.get("status") == "PENDING_APPROVAL")
     blocked = await c.post("/payments", json={"order_id": order2["id"], "authorization_id": az2["id"]})
     ok("payment blocked while PENDING", blocked.status_code == 403)

@@ -24,6 +24,13 @@ const INTENTS: { match: string[]; label: string; cross: { match: string[]; label
   { match: ["sticker"], label: "accessories", cross: null },
 ];
 
+// Parse a max price like "under 3000", "below ₹3000", "<= 2500", "within 4000".
+function parseMaxPrice(q: string): number | null {
+  const m = q.toLowerCase().match(/(?:under|below|within|<|<=|\bupto\b)\s*(?:₹|rs\.?\s*)?(\d[\d,]*)/);
+  if (!m) return null;
+  return Number(m[1].replace(/,/g, ""));
+}
+
 function matchCategory(q: string, p: Product): boolean {
   const cat = `${p.category ?? ""} ${p.name}`.toLowerCase();
   for (const it of INTENTS) {
@@ -75,11 +82,17 @@ export default function ShopPage() {
     const all = await fetchProducts();
     setBusy(false);
 
-    const main = all.filter((p) => matchCategory(q, p));
-    const cross = crossSellFor(q, all).filter((p) => !main.some((m) => m.id === p.id));
+    const max = parseMaxPrice(q);
+    let main = all.filter((p) => matchCategory(q, p));
+    if (max !== null) main = main.filter((p) => p.price_minor <= max * 100);
+    main = main.slice(0, 3); // show a curated 2-3 options, not everything
+    const cross = crossSellFor(q, all).filter((p) => !main.some((m) => m.id === p.id)).slice(0, 2);
 
-    const mainLabel = main.length ? `Found ${main.length} for your request. Tap “Add to cart” to choose.` : "I couldn't find a match — here's everything we have.";
-    const crossLabel = cross.length ? "Also, people who bought these usually add these too — want one?" : "";
+    const budgetTxt = max !== null ? ` under ${inr(max * 100)}` : "";
+    const mainLabel = main.length
+      ? `I found ${main.length} option${main.length > 1 ? "s" : ""}${budgetTxt}. Tap “Add to cart” to choose.`
+      : "I couldn't find a match — here's what we have.";
+    const crossLabel = cross.length ? "People also grab these — want one too?" : "";
 
     setMessages((m) => [...m, {
       from: "ai",

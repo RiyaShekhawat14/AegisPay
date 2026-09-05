@@ -15,10 +15,11 @@ class RiskLevel(str, Enum):
     HIGH = "HIGH"
 
 
-# Simple deterministic thresholds (minor units).
-LOW_MAX_MINOR = 10_000  # <= this is low
-MEDIUM_MAX_MINOR = 100_000  # <= this is medium; above is high
-NEW_BUYER_HIGH_MINOR = 10_000  # a new buyer above this is high, even under MEDIUM_MAX
+# Simple deterministic thresholds (minor units). Demo-friendly bands so realistic
+# purchases auto-approve; very large amounts still require human/quorum approval.
+LOW_MAX_MINOR = 300_000  # <= ₹3,000 is low risk (shoes, everyday items)
+MEDIUM_MAX_MINOR = 2_000_000  # <= ₹20,000 is medium; above is high
+NEW_BUYER_HIGH_MINOR = 1_500_000  # a new buyer above ₹15,000 is high
 
 
 def score(

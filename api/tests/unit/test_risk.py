@@ -4,10 +4,10 @@ from api.modules.risk.service import RiskLevel, score
 
 
 def test_low_medium_high_thresholds():
-    assert score(amount_minor=5000) == RiskLevel.LOW
-    assert score(amount_minor=50_000) == RiskLevel.MEDIUM
-    assert score(amount_minor=100_000) == RiskLevel.MEDIUM  # boundary: equal to medium max
-    assert score(amount_minor=100_001) == RiskLevel.HIGH
+    assert score(amount_minor=300_000) == RiskLevel.LOW  # <= ₹3,000
+    assert score(amount_minor=500_000) == RiskLevel.MEDIUM  # <= ₹5,000 (₹20k max)
+    assert score(amount_minor=2_000_000) == RiskLevel.MEDIUM  # boundary: equal to medium max
+    assert score(amount_minor=2_000_001) == RiskLevel.HIGH
 
 
 def test_high_velocity_always_high():
@@ -15,4 +15,4 @@ def test_high_velocity_always_high():
 
 
 def test_new_buyer_medium():
-    assert score(amount_minor=20_000, is_new_buyer=True) == RiskLevel.MEDIUM
+    assert score(amount_minor=500_000, is_new_buyer=True) == RiskLevel.MEDIUM
