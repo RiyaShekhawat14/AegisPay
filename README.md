@@ -166,17 +166,55 @@ AWS deployment to add when an AWS account is available.
 
 ## Status
 
-`DESIGN -> SKELETON` — the architecture is documented and a **production-oriented skeleton**
-now exists: `api/` (FastAPI control plane + isolated AI runtime)
-and `frontend/` (Next.js). The deterministic safety logic is implemented and unit-tested
-(payment state machine, policy engine, protocol gateway, idempotency, cart/price/inventory
-guards, atomic campaign budget, refund guard, hash-chained audit), and the full unit suite passes.
+`DESIGN -> IMPLEMENTED` — the control plane, isolated AI runtime, and a full merchant/buyer
+frontend are built and wired, not just documented.
 
-Implemented and unit-tested now: real authentication (JWT HS256 + API key → tenant + RBAC),
-token-bucket rate limiting, and the **purchase execution flow** — idempotent payment
-initiation, provider-timeout → `UNKNOWN`, deduped + signature-verified webhooks, and
-reconciliation to `PAID` (see `tests/unit/test_{jwt,ratelimit,purchase_flow}.py`).
+### Implemented and tested
 
-**Honesty note:** DB-backed repositories (SQLAlchemy), live Razorpay/UPI HTTP, SQS/Redis
-wiring, and observability are still to be completed; they are adapter-ready where they
-exist and are **not** claimed as done. See `docs/40-engineering-roadmap.md`.
+- **Control plane (FastAPI)** — modular monolith with centralized middleware: request ID,
+  tenant-context pinning, token-bucket rate limiting, Prometheus/OpenTelemetry metrics, CORS,
+  and structured logging + error envelopes. 13 resource routers (auth, products, carts, orders,
+  authorizations, payments, webhooks, reconciliation, audit, passport, grow, protocol, health).
+- **Tenant isolation & persistence** — PostgreSQL 16 schema (`db/migrations/0001_initial.sql`)
+  with enabled Row-Level Security on every tenant-owned table, an append-only audit table,
+  async SQLAlchemy models, and tenant-scoped repositories. Sessions pin `app.tenant_id`
+  per transaction so RLS is a hard boundary even on a bug.
+- **AuthN/AuthZ** — JWT HS256 + API-key → principal; RBAC with agent scoping (an agent can
+  never hold a forbidden permission); salted bcrypt hashing; password-reset flow.
+- **Payments** — payment state machine where `UNKNOWN` is first-class and never blindly
+  retried; a live Razorpay adapter (httpx) with HMAC-SHA256 webhook verification and reconcile;
+  idempotent payment initiation; the full purchase flow
+  (idempotent initiate → provider timeout → `UNKNOWN` → deduped + signature-verified webhook →
+  reconciliation → `PAID`).
+- **Policy / risk / authorization** — deterministic policy engine (`DENY` always wins),
+  risk scoring, and an authorization gate (low-amount auto-allow, high-amount human/quorum
+  approval, over-cap and blocked-category deny). Approvals are scoped, expiring, non-replayable.
+- **Commerce safety** — server-owned prices, cart-hash snapshot, price/version/inventory
+  invalidation, single-use expiring authorizations revalidated before payment.
+- **Protocol gateway** — adapter layer normalizing MCP / A2A / ACP / AP2 / x402 into a
+  canonical AegisPay intent; no adapter can ever produce a payment, with replay protection
+  and idempotency.
+- **Isolated AI runtime** — a separate service with no DB credentials and no payment secrets.
+  A tool allowlist **forbids** money moves (`execute_payment`, `capture`, `refund`,
+  `policy.write`); its only client can do read-only and *request* actions against the control plane.
+- **Trust artifacts** — hash-chained, tamper-evident audit ledger; transaction passport.
+- **Background logic** — reconciliation worker, webhook processor, and outbox relay modules.
+- **Frontend (Next.js 15 + TS + Tailwind)** — a buyer shop (catalog, cart, intent, checkout via
+  Razorpay, approval, audit timeline) and a merchant console (catalog, campaigns, opportunities,
+  policies, approvals, agents, analytics, audit), with a lazy-seeded demo catalog.
+- **Tests** — 63 unit tests passing locally (state machine, policy, gateway, idempotency,
+  commerce safety, budget, refund guard, JWT, rate limit, purchase flow, AI-runtime isolation,
+  red-team attacks); 27+ integration tests wired against the compose stack; Playwright E2E
+  checkout flow. GitHub Actions CI for api + web + integration.
+
+### Remaining / adapter-ready (not claimed as done)
+
+- **SQS consumer loop** — the queue poll → dispatch → ack → DLQ loop in `workers/main.py`
+  is a TODO; reconciliation / webhook / outbox modules are written and SQS-ready.
+- **Redis-backed stores** — rate limiting and idempotency use in-memory stores with a
+  Redis store interface; Redis wiring itself is TODO.
+- **Production AWS deployment** — CloudFront → ALB → ECS, RDS, ElastiCache, SQS, S3,
+  Secrets Manager + KMS is fully documented in `docs/21-*` but not yet deployed.
+- **LLM (Ollama)** is optional; the runtime falls back gracefully without it.
+
+See `docs/40-engineering-roadmap.md` and `docs/51-implementation-roadmap.md` for what is next.
